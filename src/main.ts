@@ -381,7 +381,10 @@ class Game {
     // stop accepting input right away; the card appears after a short beat
     this.mode = 'result';
     this.dragging = false;
+    const world = this.world;
     window.setTimeout(() => {
+      // the player may already have left this run (e.g. back to home)
+      if (this.mode !== 'result' || this.world !== world) return;
       document.body.dataset.mode = 'result';
       if (won) sfx.win();
       else sfx.lose();
@@ -517,6 +520,7 @@ class Game {
   /** Screenshot helper: stop the simulation but keep rendering. */
   debugFreeze() {
     if (this.mode === 'playing') this.mode = 'paused';
+    this.world.boss.hitTime = -1;
     // autoplay skips rendering, so let the camera and popups catch up first
     for (let i = 0; i < 90; i++) this.view.render(this.world, 1 / 60);
     this.updateHud();
