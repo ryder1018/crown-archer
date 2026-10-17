@@ -34,7 +34,7 @@ Info.plist 已設定 `ITSAppUsesNonExemptEncryption = NO`，上傳後不會再�
 拉弓射箭，一路稱王！
 
 **宣傳文字 Promotional Text（170 字內）**
-選對閘門、萬箭齊發！帶領你的弓兵團一路壯大，擊潰敵軍，挑戰巨人首領，奪下王冠！
+選對閘門、萬箭齊發！六大地區、六大首領、箭雨技能——帶領你的弓兵團一路壯大，奪下王冠！
 
 **描述 Description**
 ```
@@ -45,20 +45,23 @@ Info.plist 已設定 `ITSAppUsesNonExemptEncryption = NO`，上傳後不會再�
 ◆ 選對閘門，兵力暴增
 +50、x2、÷2、-30……每道閘門都會改變你的兵力。選錯了也別慌：對著閘門射箭，數字會一路往上加！
 
-◆ 萬箭齊發，擊潰敵軍
-成群的敵兵會朝你衝來。對準他們放箭，在他們碰到你之前把他們射倒。
+◆ 六大首領，各有絕招
+森林巨魔投擲巨石、冰霜巨人冰凍你的弓兵、沙漠督軍召喚援兵、熔岩魔像開啟護盾、骷髏巫王召喚骷髏大軍……看到地上的紅圈就快閃開！
 
-◆ 擊破寶箱，取得增益
-連射、多重箭、援軍、金幣——射穿木桶就能拿到強力獎勵。
+◆ 形形色色的敵軍
+衝鋒極快的騎兵、遠距離放箭的弓手、刀槍不入的重甲兵，每個地區都有新挑戰。
 
-◆ 挑戰巨人首領
-每一關的盡頭都有巨人首領守著城堡。在它的大棒子砸下來之前，用箭雨把它擊倒！
+◆ 施放技能，扭轉戰局
+箭雨從天而降、冰封全場敵人、號角召來援軍——蓄滿能量就按下去！
+
+◆ 擊破木桶，取得道具
+連射、多重箭、火焰箭、冰封、炸彈、援軍與金幣。
+
+◆ 六大地區，無盡關卡
+河上石橋、青翠草原、冰雪山道、黃沙大漠、熔岩火山、幽暗墓地，每個地區都有自己的配樂。每 7 關還有寶藏關，打爆寶箱賺大把金幣！
 
 ◆ 升級你的軍團
-用金幣強化初始兵力、射速、攻擊力與收益，挑戰更難的關卡。
-
-◆ 四大地形，無盡關卡
-河上石橋、青翠草原、冰雪山道、黃沙大漠，關卡越往後越刺激。
+用金幣強化初始兵力、射速、攻擊力與收益。
 
 ・可離線遊玩
 ・沒有廣告、沒有內購、不收集任何個人資料
@@ -81,7 +84,7 @@ Crown Archers
 Draw bows. Claim the crown!
 
 **Promotional Text**
-Pick the right gates, rain arrows on the enemy, and topple giant bosses. Grow your archer army and claim the crown!
+Pick the right gates, dodge boulders and fireballs, call down arrow storms and topple six giant bosses. Claim the crown!
 
 **Description**
 ```
@@ -92,20 +95,23 @@ Drag left and right to lead your army of archers. They shoot on their own — yo
 ◆ PICK THE RIGHT GATE
 +50, x2, ÷2, -30… every gate changes the size of your army. Picked a bad one? Shoot it! Your arrows push its number up.
 
-◆ RAIN ARROWS
-Enemy hordes charge straight at you. Aim your volleys and cut them down before they reach your lines.
+◆ SIX GIANT BOSSES
+The Forest Troll hurls boulders, the Frost Giant freezes your bows, the Sand Warlord summons troops, the Lava Golem raises a shield and the Lich King commands an army of skeletons. Dodge the red circles!
+
+◆ ALL KINDS OF ENEMIES
+Charging cavalry, archers that shoot from afar and armoured knights that shrug off arrows.
+
+◆ UNLEASH SKILLS
+Call down an arrow storm, freeze the battlefield or sound the war horn for reinforcements.
 
 ◆ SMASH BARRELS FOR POWER-UPS
-Rapid fire, multi-shot, reinforcements and coins are waiting inside.
+Rapid fire, multi-shot, fire arrows, freeze, bombs, reinforcements and coins.
 
-◆ TOPPLE GIANT BOSSES
-A giant chief guards the castle at the end of every level. Bring him down before his club comes crashing down on your army.
+◆ SIX LANDS, ENDLESS LEVELS
+River bridges, green meadows, frozen passes, golden deserts, lava peaks and haunted graves, each with its own music. Every 7th level is a treasure run!
 
 ◆ UPGRADE YOUR LEGION
-Spend coins on starting army, fire rate, damage and income to take on tougher levels.
-
-◆ FOUR LANDS, ENDLESS LEVELS
-River bridges, green meadows, snowy passes and desert roads.
+Spend coins on starting army, fire rate, damage and income.
 
 • Play offline
 • No ads, no in-app purchases, no data collection
@@ -121,8 +127,8 @@ Crown Archers is here!
 
 ## 螢幕截圖 Screenshots
 
-- `store/zh-TW/1.png` … `5.png`：繁中商店頁
-- `store/en-US/1.png` … `5.png`：英文商店頁
+- `store/zh-TW/1.png` … `7.png`：繁中商店頁
+- `store/en-US/1.png` … `7.png`：英文商店頁
 - 尺寸 1320 × 2868（6.9 吋 iPhone），App Store Connect 會自動縮放給較小機型使用。
 - 本 App 只支援 iPhone（未勾選 iPad），所以不需要 iPad 截圖。
 

@@ -12,18 +12,20 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 const page = await browser.newPage({ viewport: { width: 440, height: 956 }, deviceScaleFactor: 3, locale });
 await page.goto(base + '?debug');
 await page.waitForFunction(() => document.body.classList.contains('ready'));
-await page.addStyleTag({ content: '#hint{display:none!important}' });
+await page.addStyleTag({ content: '#hint,#banner{display:none!important}' });
 
 const shot = async (name) => {
   await page.waitForTimeout(900);
   await page.screenshot({ path: `${out}/${name}.png` });
 };
 const setup = (level, up = 6) => page.evaluate(([lv, u]) => {
-  window.game.debugSetSave({ level: lv, coins: 12850, upgrades: { army: u, rate: u, damage: u, income: u } });
+  const seen = ['theme:meadow', 'theme:snow', 'theme:desert', 'theme:volcano', 'theme:night', 'boss:troll', 'boss:frost', 'boss:warlord', 'boss:golem', 'boss:lich',
+    'unit:cavalry', 'unit:archer', 'unit:armored', 'item:fire', 'item:freeze', 'item:bomb', 'skill:storm', 'skill:freeze', 'skill:horn'];
+  window.game.debugSetSave({ level: lv, coins: 12850, failStreak: 0, skill: 'storm', seen, upgrades: { army: u, rate: u, damage: u, income: u } });
 }, [level, up]);
 
 // Plays candidate levels until `cond` happens mid-run, so the shot shows that moment.
-async function capture(name, levels, up, cond) {
+async function capture(name, levels, up, cond, freeze = [90, false]) {
   for (const lv of levels) {
     await setup(lv, up);
     await page.evaluate(() => window.game.debugStart());
@@ -34,7 +36,7 @@ async function capture(name, levels, up, cond) {
     }, cond.toString());
     if (ok) {
       // let a few frames render (particles, popups), then freeze the moment
-      await page.evaluate(() => window.game.debugFreeze());
+      await page.evaluate(([f, sim]) => window.game.debugFreeze(f, sim), freeze);
       await shot(name);
       return;
     }
@@ -42,24 +44,25 @@ async function capture(name, levels, up, cond) {
   throw new Error(`no level produced ${name}`);
 }
 
-await capture('1-gates', [8, 10, 11, 12, 14, 6], 5, (w) =>
+await capture('1-gates', [8, 10, 11, 12, 6], 5, (w) =>
   w.army.count > 20 && w.gates.some((x) => !x.passed && x.d - w.army.d < 12 && x.d - w.army.d > 8));
-await capture('2-battle', [9, 10, 12, 15, 17], 3, (w) =>
+await capture('2-boss', [24, 23, 22], 15, (w) =>
+  w.boss.shielded && w.shots.some((s) => s.t < s.total * 0.6) && w.boss.d - w.army.d < 34);
+await capture('3-battle', [9, 10, 12, 15, 17], 3, (w) =>
   w.squads.some((s) => s.engaged && s.count > 8) || w.squads.some((s) => !s.gone && s.d - w.army.d < 9 && s.count > 12));
-await capture('3-boss', [10, 11, 12, 13], 6, (w) =>
-  w.boss.state === 'attack' || (w.boss.state === 'walk' && w.boss.d - w.army.d < 24));
+await capture('4-skill', [9, 10, 8, 6], 3, (w) => {
+  const target = w.squads.some((s) => !s.gone && s.aggro && s.count > 30 && s.d - w.army.d < 36);
+  if (w.skillCharge >= 1 && target && w.boss.state === 'idle') w.useSkill();
+  return w.stormActive && target;
+}, [55, true]);
+await capture('5-region', [29, 27, 26], 18, (w) =>
+  w.squads.some((s) => s.unit === 'skeleton' && !s.gone && s.d - w.army.d < 28) && w.boss.state === 'walk');
+await capture('6-treasure', [14, 21, 28], 9, (w) => w.boss.chestTimer > 0 && w.boss.chestTimer < 10 && w.boss.hp < w.boss.maxHp * 0.7);
 
-// 4. victory
-await setup(10, 8);
-await page.evaluate(() => window.game.debugStart());
-await page.evaluate(() => window.game.debugAutoplayUntil(() => false, 120));
-await page.waitForTimeout(1600);
-await shot('4-victory');
-
-// 5. home with upgrades
+// home with upgrades and a skill
 await setup(14, 7);
 await page.waitForTimeout(600);
-await shot('5-home');
+await shot('7-home');
 
 await browser.close();
 console.log('saved to', out);

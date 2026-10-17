@@ -80,7 +80,7 @@ interface Shockwave { mesh: THREE.Mesh; age: number; life: number; size: number 
 export class Effects {
   readonly group = new THREE.Group();
   private readonly enemyArrows = new ArrowPool([0x5a3a22, 0x2a1a10, 0xd0d6de], 160, 0.75);
-  private readonly stormArrows = new ArrowPool([0xffe27a, 0xffffff, 0xfff4c0], 240, 1.3);
+  private readonly stormArrows = new ArrowPool([0xffffff, 0x2f7bff, 0x7fdcff], 420, 1.7);
   private readonly shots = new Map<number, ShotView>();
   private readonly waves: Shockwave[] = [];
   private projGeo: THREE.BufferGeometry = new THREE.DodecahedronGeometry(0.7, 0);
@@ -139,10 +139,11 @@ export class Effects {
 
   storm(points: { x: number; z: number }[]) {
     for (const p of points) {
-      for (let k = 0; k < 3; k++) {
-        const x = p.x + (Math.random() - 0.5) * 1.6;
-        const z = p.z + (Math.random() - 0.5) * 1.6;
-        this.stormArrows.launch(x + 2, 16, z + 6, x, 0.3, z, 0.3 + Math.random() * 0.12, 0);
+      for (let k = 0; k < 5; k++) {
+        const x = p.x + (Math.random() - 0.5) * 2.4;
+        const z = p.z + (Math.random() - 0.5) * 2.4;
+        // fired in a long slant from behind the army so the arrows read clearly from the camera
+        this.stormArrows.launch(x - 1 + Math.random() * 2, 15, z + 20, x, 0.3, z, 0.5 + Math.random() * 0.2, 0);
       }
     }
   }
@@ -208,7 +209,7 @@ export class Effects {
       if (Math.random() < 0.5) this.particles.burst(x, 0.3, z, 0x2f7bff, 1, 2, 0.1, 0.4);
     });
     this.stormArrows.update(dt, (x, z) => {
-      if (Math.random() < 0.6) this.particles.burst(x, 0.3, z, 0xffe27a, 2, 3, 0.12, 0.4);
+      if (Math.random() < 0.7) this.particles.burst(x, 0.3, z, 0x9fdcff, 3, 3.5, 0.14, 0.45);
     });
     for (const w of this.waves) {
       if (!w.mesh.visible) continue;

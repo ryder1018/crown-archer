@@ -13,21 +13,25 @@ ROOT = os.path.dirname(HERE)
 CAPTIONS = {
     'zh-TW': [
         ('選對閘門', '兵力瞬間暴增！'),
+        ('六大首領', '閃開巨石與火球！'),
         ('萬箭齊發', '擊潰來襲敵軍'),
-        ('挑戰巨人首領', '守住你的王冠'),
-        ('贏得金幣', '升級你的弓兵團'),
-        ('四大地形', '無盡關卡等你征服'),
+        ('施放技能', '箭雨從天而降'),
+        ('六大地區', '無盡關卡等你征服'),
+        ('寶藏關', '打爆寶箱賺金幣'),
+        ('升級軍團', '稱王之路由你開創'),
     ],
     'en-US': [
         ('PICK THE GATE', 'Grow your army fast!'),
+        ('6 GIANT BOSSES', 'Dodge boulders and fireballs'),
         ('RAIN ARROWS', 'Crush the enemy horde'),
-        ('GIANT BOSSES', 'Defend your crown'),
-        ('WIN COINS', 'Upgrade your archers'),
-        ('4 LANDS', 'Endless levels to conquer'),
+        ('UNLEASH SKILLS', 'Call down an arrow storm'),
+        ('6 LANDS', 'Endless levels to conquer'),
+        ('TREASURE RUNS', 'Crack chests for coins'),
+        ('UPGRADE', 'Build the mightiest army'),
     ],
 }
 
-NAMES = ['1-gates', '2-battle', '3-boss', '4-victory', '5-home']
+NAMES = ['1-gates', '2-boss', '3-battle', '4-skill', '5-region', '6-treasure', '7-home']
 
 
 def font(locale, size, bold=True):
@@ -71,7 +75,7 @@ def compose(locale):
         draw.text((W / 2, 420), sub, font=sf, fill='#ffe27a', anchor='mm', stroke_width=7, stroke_fill='#0f2554')
 
         # phone-style framed screenshot
-        sw = 1110
+        sw = 1000
         sh = int(shot.height * sw / shot.width)
         shot = shot.resize((sw, sh), Image.LANCZOS)
         x = (W - sw) // 2

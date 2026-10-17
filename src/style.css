@@ -722,6 +722,14 @@ body[data-mode='result'] .hud {
   display: flex;
   flex-direction: column;
   line-height: 1.25;
+  min-width: 0;
+}
+
+.chip-text b,
+.chip-text small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chip-text b {

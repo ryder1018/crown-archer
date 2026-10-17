@@ -443,7 +443,7 @@ class Game {
     chip.classList.toggle('locked', !skill);
     if (skill) {
       $('#chip-icon').innerHTML = SKILL_ICONS[skill];
-      $('#chip-name').textContent = `${t.skill}：${t[`skill_${skill}`]}`;
+      $('#chip-name').textContent = t[`skill_${skill}`];
       $('#chip-sub').textContent = open.length > 1 ? `${t[`skillInfo_${skill}`]} · ⇄` : t[`skillInfo_${skill}`];
     } else {
       $('#chip-icon').innerHTML = SKILL_ICONS.storm;
@@ -723,11 +723,19 @@ class Game {
   }
 
   /** Screenshot helper: stop the simulation but keep rendering. */
-  debugFreeze() {
+  debugFreeze(frames = 90, simulate = false) {
+    // autoplay skips rendering, so let the camera and popups catch up first
+    for (let i = 0; i < frames; i++) {
+      if (simulate && this.world.state === 'playing') {
+        botSteer(this.world);
+        this.world.update(STEP);
+        this.onEvents();
+      }
+      this.view.render(this.world, 1 / 60);
+    }
     if (this.mode === 'playing') this.mode = 'paused';
     this.world.boss.hitTime = -1;
-    // autoplay skips rendering, so let the camera and popups catch up first
-    for (let i = 0; i < 90; i++) this.view.render(this.world, 1 / 60);
+    this.view.render(this.world, 0);
     this.updateHud();
   }
 
