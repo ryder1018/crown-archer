@@ -26,6 +26,8 @@ export interface Barrel {
   reward: Reward; small: boolean; broken: boolean; gone: boolean; hitTime: number;
 }
 
+export interface Hazard { id: number; d: number; x0: number; x1: number; lethality: number; passed: boolean }
+
 export type BossState = 'idle' | 'walk' | 'attack' | 'dead';
 
 export interface Boss {
@@ -46,6 +48,7 @@ export type WorldEvent =
   | { type: 'barrelHit'; barrel: Barrel }
   | { type: 'barrelBreak'; barrel: Barrel }
   | { type: 'squadDead'; squad: Squad }
+  | { type: 'hazardHit'; n: number; hazard: Hazard }
   | { type: 'bossHit' }
   | { type: 'bossSmash'; n: number }
   | { type: 'bossDead' }
@@ -77,6 +80,7 @@ export class World {
   readonly gates: Gate[] = [];
   readonly squads: Squad[] = [];
   readonly barrels: Barrel[] = [];
+  readonly hazards: Hazard[] = [];
   readonly boss: Boss;
   readonly events: WorldEvent[] = [];
   private endTimer = -1;
@@ -104,6 +108,8 @@ export class World {
           id: id++, d: e.d, x: e.x, r: e.small ? 0.7 : 1.1, hp: e.hp, maxHp: e.hp,
           reward: e.reward, small: e.small, broken: false, gone: false, hitTime: -1,
         });
+      } else if (e.kind === 'hazard') {
+        this.hazards.push({ id: id++, d: e.d, x0: e.x0, x1: e.x1, lethality: e.lethality, passed: false });
       } else {
         boss = {
           d: e.d, x: 0, hp: e.hp, maxHp: e.hp, damage: e.damage, speed: e.speed,
@@ -145,6 +151,7 @@ export class World {
     this.updateArrows(dt);
     this.updateGates();
     this.updateBarrels();
+    this.updateHazards();
     this.updateSquads(dt);
     this.updateBoss(dt);
     if (this.army.count <= 0) {
@@ -334,6 +341,22 @@ export class World {
       const before = Math.round(a.count);
       a.count = Math.round(applyMod(a.count, chosen.op, chosen.value));
       this.events.push({ type: 'gatePass', delta: a.count - before, gate: chosen });
+    }
+  }
+
+  private updateHazards() {
+    const a = this.army;
+    for (const h of this.hazards) {
+      if (h.passed || a.d < h.d) continue;
+      h.passed = true;
+      // soldiers are spread over [x - r, x + r]; the overlapping share walks into the spikes
+      const r = this.armyRadius;
+      const overlap = Math.max(0, Math.min(a.x + r, h.x1) - Math.max(a.x - r, h.x0));
+      const n = Math.round(a.count * (overlap / (2 * r)) * h.lethality);
+      if (n > 0) {
+        a.count = Math.max(0, a.count - n);
+        this.events.push({ type: 'hazardHit', n, hazard: h });
+      }
     }
   }
 

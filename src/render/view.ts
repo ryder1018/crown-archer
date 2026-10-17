@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { t } from '../i18n';
 import { ARROW_RANGE, ARROW_SPEED, MAX_ARMY_DISPLAY, MAX_ARROWS, type Reward } from '../sim/types';
-import { type Barrel, type Gate, type World, type WorldEvent } from '../sim/world';
+import { type Barrel, type Gate, type Hazard, type World, type WorldEvent } from '../sim/world';
 import { buildEnvironment, THEMES, type Environment } from './environment';
-import { archerGeometry, arrowGeometry, barrelGeometry, BOSS_COLORS, bossRig, enemyGeometry, kingGroup, PALETTE, type BossRig } from './models';
+import { archerGeometry, arrowGeometry, barrelGeometry, BOSS_COLORS, bossRig, enemyGeometry, kingGroup, PALETTE, spikeRollerGeometry, type BossRig } from './models';
 import { Overlay } from './overlay';
 import { Particles } from './particles';
-import { blobTexture, crateLabel, gateLabel, hpLabel, LabelTexture, ringTexture } from './textures';
+import { blobTexture, crateLabel, gateLabel, hazardStripeTexture, hpLabel, LabelTexture, ringTexture } from './textures';
 
 const ENEMY_CAPACITY = 1800;
 const SLOT_OFFSET = 3;
@@ -21,6 +21,7 @@ const RIGHT = new THREE.Vector3(1, 0, 0);
 const qx = new THREE.Quaternion();
 
 interface GateView { gate: Gate; group: THREE.Group; panel: THREE.Mesh; label: LabelTexture; mat: THREE.MeshBasicMaterial; fade: number; lastHit: number }
+interface HazardView { hazard: Hazard; group: THREE.Group; roller: THREE.Mesh }
 interface BarrelView { barrel: Barrel; group: THREE.Group; body: THREE.Mesh; label: LabelTexture; sprite: THREE.Sprite | null }
 
 function slot(i: number, out: { x: number; z: number }) {
@@ -64,6 +65,7 @@ export class GameView {
   private env: Environment | null = null;
   private gates: GateView[] = [];
   private barrels: BarrelView[] = [];
+  private hazards: HazardView[] = [];
   private boss: BossRig | null = null;
   private bossShadow: THREE.Mesh | null = null;
   private squadShadows = new Map<number, THREE.Mesh>();
@@ -204,6 +206,25 @@ export class GameView {
       this.barrels.push({ barrel: b, group, body, label, sprite });
     }
 
+    const stripeTex = this.keep(hazardStripeTexture());
+    const rollerMat = this.keep(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+    for (const h of world.hazards) {
+      const w = h.x1 - h.x0;
+      const group = new THREE.Group();
+      const tex = stripeTex.clone();
+      tex.repeat.set(w / 1.2, 1.2);
+      tex.needsUpdate = true;
+      const stripe = new THREE.Mesh(this.keep(new THREE.PlaneGeometry(w, 2.6)), this.keep(new THREE.MeshLambertMaterial({ map: this.keep(tex) })));
+      stripe.rotation.x = -Math.PI / 2;
+      stripe.position.y = 0.03;
+      const roller = new THREE.Mesh(this.keep(spikeRollerGeometry(w - 0.3)), rollerMat);
+      roller.position.y = 1.0;
+      group.add(stripe, roller);
+      group.position.set((h.x0 + h.x1) / 2, 0, -h.d);
+      this.levelGroup.add(group);
+      this.hazards.push({ hazard: h, group, roller });
+    }
+
     this.boss = bossRig(BOSS_COLORS[world.level.theme]);
     this.boss.root.position.set(0, 0, -world.boss.d);
     this.boss.root.scale.setScalar(1.6);
@@ -249,6 +270,13 @@ export class GameView {
   }
 
   private unload() {
+    this.levelGroup.traverse((o) => {
+      if (o instanceof THREE.Mesh || o instanceof THREE.InstancedMesh || o instanceof THREE.Sprite) {
+        o.geometry.dispose();
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of mats) m.dispose();
+      }
+    });
     this.scene.remove(this.levelGroup);
     this.levelGroup = new THREE.Group();
     this.scene.add(this.levelGroup);
@@ -260,6 +288,7 @@ export class GameView {
     this.levelDisposables = [];
     this.gates = [];
     this.barrels = [];
+    this.hazards = [];
     this.squadShadows.clear();
   }
 
@@ -298,6 +327,13 @@ export class GameView {
           this.particles.burst(world.boss.x, 2.5, -world.boss.d, 0xd6452b, 60, 9, 0.35, 1.3);
           this.particles.burst(world.boss.x, 2.5, -world.boss.d, PALETTE.gold, 40, 8, 0.25, 1.4);
           break;
+        case 'hazardHit': {
+          const h = ev.hazard;
+          this.overlay.popup(this.armyAnchor(world, 2.6), `-${ev.n}`, 'pop-bad', 1.1);
+          this.particles.burst((h.x0 + h.x1) / 2, 0.8, -h.d, PALETTE.blue, 22, 6, 0.16, 0.8);
+          this.shake = Math.max(this.shake, 0.5);
+          break;
+        }
         case 'squadDead':
           break;
         default:
@@ -313,6 +349,10 @@ export class GameView {
     this.syncArrows(world);
     this.syncGates(world, dt);
     this.syncBarrels(world);
+    for (const hv of this.hazards) {
+      hv.group.visible = hv.hazard.d - world.army.d < 120 && hv.hazard.d - world.army.d > -12;
+      hv.roller.rotation.x -= dt * 5;
+    }
     this.syncBoss(world, dt);
     this.particles.update(dt);
     this.env?.update(dt);

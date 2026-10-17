@@ -146,6 +146,10 @@ class Game {
         case 'coins':
           this.bumpCoins();
           break;
+        case 'hazardHit':
+          sfx.crash();
+          this.haptic('heavy');
+          break;
         case 'bossSmash':
           sfx.smash();
           this.haptic('heavy');
@@ -345,8 +349,10 @@ class Game {
     }
     void writeSave(this.save);
     this.hideHint();
+    // stop accepting input right away; the card appears after a short beat
+    this.mode = 'result';
+    this.dragging = false;
     window.setTimeout(() => {
-      this.mode = 'result';
       document.body.dataset.mode = 'result';
       if (won) sfx.win();
       else sfx.lose();

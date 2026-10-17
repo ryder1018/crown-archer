@@ -66,6 +66,27 @@ describe('world', () => {
     expect(w.gates[1].value).toBe(-10);
   });
 
+  it('spike traps hit only the soldiers that overlap them', () => {
+    const level: LevelSpec = {
+      level: 1, theme: 'river', bossD: 200,
+      entities: [
+        { kind: 'hazard', d: 10, x0: -5, x1: 0, lethality: 1 },
+        { kind: 'hazard', d: 20, x0: 0, x1: 5, lethality: 1 },
+        { kind: 'boss', d: 200, hp: 10, damage: 1, speed: 0 },
+      ],
+    };
+    const w = new World(level, statsFor({ army: 20, rate: 0, damage: 0, income: 0 }));
+    w.setTargetX(-4);
+    for (let i = 0; i < 70; i++) w.update(1 / 60);
+    expect(w.army.d).toBeGreaterThan(10);
+    const afterFirst = w.army.count;
+    expect(afterFirst).toBeLessThan(43);
+    w.setTargetX(-4);
+    for (let i = 0; i < 70; i++) w.update(1 / 60);
+    expect(w.army.d).toBeGreaterThan(20);
+    expect(w.army.count).toBe(afterFirst);
+  });
+
   it('bot with reference upgrades clears the early game', () => {
     for (let lv = 1; lv <= 10; lv++) {
       const w = play(generateLevel(lv), referenceStats(lv));

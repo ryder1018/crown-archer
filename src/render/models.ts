@@ -248,3 +248,22 @@ export function treeGeometry(kind: 'pine' | 'round' | 'cactus' | 'rock') {
     [at(new THREE.DodecahedronGeometry(0.5, 0), 0.7, 0.25, 0.2), 0x857a72],
   ]);
 }
+
+/** Spiked log that spans `width` along x, centred on the origin. Rotate around x to roll it. */
+export function spikeRollerGeometry(width: number) {
+  const parts: Part[] = [[at(new THREE.CylinderGeometry(0.55, 0.55, width, 10), 0, 0, 0, 0, 0, Math.PI / 2), PALETTE.woodDark]];
+  for (const end of [-1, 1]) parts.push([at(new THREE.CylinderGeometry(0.62, 0.62, 0.18, 10), end * (width / 2 - 0.09), 0, 0, 0, 0, Math.PI / 2), 0x6b7682]);
+  const rows = Math.max(3, Math.round(width / 0.7));
+  for (let i = 0; i < rows; i++) {
+    const x = -width / 2 + 0.35 + (i * (width - 0.7)) / (rows - 1);
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2 + (i % 2) * (Math.PI / 6);
+      const spike = new THREE.ConeGeometry(0.14, 0.5, 5);
+      spike.translate(0, 0.78, 0);
+      spike.rotateX(a);
+      spike.translate(x, 0, 0);
+      parts.push([spike, 0xd9e3ee]);
+    }
+  }
+  return merge(parts);
+}

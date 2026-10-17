@@ -38,6 +38,7 @@ export type EntitySpec =
   | { kind: 'gates'; d: number; gates: GateSpec[] }
   | { kind: 'squad'; d: number; x: number; count: number; charge: boolean }
   | { kind: 'barrel'; d: number; x: number; hp: number; reward: Reward; small: boolean }
+  | { kind: 'hazard'; d: number; x0: number; x1: number; lethality: number }
   | { kind: 'boss'; d: number; hp: number; damage: number; speed: number };
 
 export type Theme = 'river' | 'meadow' | 'snow' | 'desert';

@@ -56,7 +56,8 @@ export function generateLevel(level: number, failStreak = 0): LevelSpec {
       i === 0 ? (level === 1 ? 'crates' : pick(rng, ['gates', 'crates'] as const))
       : roll < 0.36 ? 'gates'
       : roll < 0.66 ? 'squad'
-      : roll < 0.84 ? 'crates'
+      : roll < 0.8 ? 'crates'
+      : roll < 0.9 && level >= 4 ? 'hazard'
       : 'barrel';
     // level 1 is a tutorial without enemies; later levels let the army grow before the first fight
     if (type === 'squad' && (level === 1 || i < 2)) type = rng() < 0.5 ? 'gates' : 'crates';
@@ -84,6 +85,13 @@ export function generateLevel(level: number, failStreak = 0): LevelSpec {
       entities.push({ kind: 'squad', d: d + 6, x, count, charge: level > 3 && rng() < 0.5 });
       e = Math.max(ref.startArmy, e - Math.max(0, count - shotDown) * 0.9);
       d += irange(rng, 30, 36);
+    } else if (type === 'hazard') {
+      const left = rng() < 0.5;
+      const width = range(rng, 4.2, 5.6);
+      const x0 = left ? -ROAD_HALF_WIDTH : ROAD_HALF_WIDTH - width;
+      entities.push({ kind: 'hazard', d, x0, x1: x0 + width, lethality: range(rng, 0.5, 0.7) });
+      e *= 0.92;
+      d += irange(rng, 22, 28);
     } else if (type === 'crates') {
       const n = irange(rng, 6, 9);
       const side = rng() < 0.5 ? -1 : 1;

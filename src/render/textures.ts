@@ -204,3 +204,22 @@ export function hpLabel() {
     if (sub) outlinedText(ctx, sub, w / 2, 102, 40, '#ffe27a', 'rgba(60,30,0,0.9)');
   });
 }
+
+export function hazardStripeTexture() {
+  const { c, ctx } = canvas(128, 128);
+  ctx.fillStyle = '#f4f4f4';
+  ctx.fillRect(0, 0, 128, 128);
+  ctx.fillStyle = '#e23b3b';
+  for (let i = -128; i < 256; i += 48) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i + 24, 0);
+    ctx.lineTo(i + 24 + 128, 128);
+    ctx.lineTo(i + 128, 128);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
