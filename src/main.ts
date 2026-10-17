@@ -81,8 +81,22 @@ class Game {
   }
 
   private onResize() {
-    const w = window.innerWidth;
+    // the game is portrait-only; on wide screens (desktop browsers) show it as a centred phone-shaped column
+    const app = $('#app');
+    let w = window.innerWidth;
     const h = window.innerHeight;
+    if (w / h > 0.62) {
+      w = Math.round(h * 0.5);
+      app.style.width = `${w}px`;
+      app.style.left = `${Math.round((window.innerWidth - w) / 2)}px`;
+      app.style.right = 'auto';
+      document.body.classList.add('framed');
+    } else {
+      app.style.width = '';
+      app.style.left = '';
+      app.style.right = '';
+      document.body.classList.remove('framed');
+    }
     this.view.resize(w, h);
   }
 
@@ -220,7 +234,7 @@ class Game {
     });
     window.addEventListener('pointermove', (e) => {
       if (!this.dragging || this.mode !== 'playing') return;
-      const scale = (ROAD_HALF_WIDTH * 2.6) / Math.min(window.innerWidth, 600);
+      const scale = (ROAD_HALF_WIDTH * 2.6) / Math.min($('#app').clientWidth, 600);
       this.world.setTargetX(this.dragStartTarget + (e.clientX - this.dragStartX) * scale);
     });
     const end = () => (this.dragging = false);

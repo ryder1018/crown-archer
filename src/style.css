@@ -37,6 +37,14 @@ body {
   overscroll-behavior: none;
 }
 
+body.framed {
+  background: radial-gradient(circle at 50% 30%, #2b4a8a, #0d1730);
+}
+
+body.framed #app {
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.5);
+}
+
 #app {
   position: fixed;
   inset: 0;
