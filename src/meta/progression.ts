@@ -22,12 +22,12 @@ export function referenceStats(level: number): Stats {
 
 export function upgradeCost(kind: UpgradeKind, lv: number): number {
   const base = kind === 'income' ? 60 : 40;
-  return Math.round(base * Math.pow(1.28, lv) + 10 * lv);
+  return Math.round(base * Math.pow(1.25, lv) + 10 * lv);
 }
 
 export function levelReward(level: number, won: boolean, survivors: number, progress: number, income: number): number {
   const raw = won
     ? 30 + level * 10 + Math.min(survivors, 2000) * 0.2
-    : 5 + level * 2 + progress * 20;
+    : 10 + level * 4 + progress * (20 + level * 10);
   return Math.round(raw * income);
 }

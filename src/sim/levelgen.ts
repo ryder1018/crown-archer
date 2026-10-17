@@ -22,11 +22,15 @@ function goodMod(rng: Rng, e: number, level: number): Mod {
   return { op: 'add', value: Math.round(e * range(rng, 0.35, 0.8) + irange(rng, 3, 8)) };
 }
 
-function badMod(rng: Rng, e: number): Mod {
+function badMod(rng: Rng, e: number, level: number): Mod {
   const roll = rng();
+  // the first levels teach the gates: the worse choice is just a smaller bonus
+  if (level <= 2) return { op: 'add', value: irange(rng, 1, 3) };
   if (roll < 0.25 && e > 6) return { op: 'div', value: 2 };
   if (roll < 0.4) return { op: 'add', value: irange(rng, 1, 4) };
-  return { op: 'add', value: -Math.round(e * range(rng, 0.2, 0.55) + irange(rng, 2, 6)) };
+  // never wipe out the expected army outright; be gentler while players learn the gates
+  const cap = Math.max(1, Math.floor(e * (level <= 3 ? 0.4 : 0.75)));
+  return { op: 'add', value: -Math.min(cap, Math.round(e * range(rng, 0.2, 0.55) + irange(rng, 2, 6))) };
 }
 
 /**
@@ -55,7 +59,7 @@ export function generateLevel(level: number): LevelSpec {
 
     if (type === 'gates') {
       const good = goodMod(rng, e, level);
-      const bad = badMod(rng, e);
+      const bad = badMod(rng, e, level);
       const goodLeft = rng() < 0.5;
       const mk = (m: Mod, left: boolean): GateSpec => ({
         x0: left ? -ROAD_HALF_WIDTH : 0,
