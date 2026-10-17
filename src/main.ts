@@ -85,7 +85,7 @@ class Game {
   }
 
   private newWorld() {
-    const level = generateLevel(this.save.level);
+    const level = generateLevel(this.save.level, this.save.failStreak);
     this.world = new World(level, statsFor(this.save.upgrades), (Date.now() & 0xffff) + 1);
     this.view.load(this.world);
     this.bossAnnounced = false;
@@ -285,6 +285,8 @@ class Game {
   // ---------- screens ----------
 
   private showHome() {
+    for (const m of document.querySelectorAll('.modal')) m.classList.remove('show');
+    this.hideHint();
     this.mode = 'home';
     document.body.dataset.mode = 'home';
     $('#home-level').textContent = t.level(this.save.level);
@@ -333,10 +335,12 @@ class Game {
     this.save.coins += reward;
     if (won) {
       this.save.level++;
+      this.save.failStreak = 0;
       this.save.stats.wins++;
       this.save.stats.bestArmy = Math.max(this.save.stats.bestArmy, Math.round(w.army.count));
     } else {
       this.save.stats.losses++;
+      this.save.failStreak++;
     }
     void writeSave(this.save);
     this.hideHint();
@@ -478,8 +482,24 @@ class Game {
     this.start();
   }
 
+  /** Screenshot helper: autoplay until `cond(world)` holds or `maxSeconds` pass. */
+  debugAutoplayUntil(cond: (w: World) => boolean, maxSeconds = 120) {
+    for (let i = 0; i < maxSeconds * 60 && this.world.state === 'playing' && !cond(this.world); i++) {
+      botSteer(this.world);
+      this.world.update(STEP);
+      this.onEvents();
+    }
+  }
+
+  debugSetSave(patch: Partial<SaveData>) {
+    Object.assign(this.save, patch);
+    this.newWorld();
+    this.showHome();
+  }
+
   debugSetLevel(level: number) {
     this.save.level = level;
+    this.save.failStreak = 0;
     this.newWorld();
     this.showHome();
   }

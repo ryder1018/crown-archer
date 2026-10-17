@@ -25,8 +25,8 @@ function sloppySteer(w: World, rng: () => number, mem: Map<number, number>) {
   w.setTargetX(a.targetX + Math.sin(w.time * 1.3) * 1.2);
 }
 
-function run(level: number, stats: Stats, sloppy: boolean, seed: number) {
-  const w = new World(generateLevel(level), stats, seed);
+function run(level: number, stats: Stats, sloppy: boolean, seed: number, failStreak = 0) {
+  const w = new World(generateLevel(level, failStreak), stats, seed);
   const rng = mulberry32(seed * 31);
   const mem = new Map<number, number>();
   for (let i = 0; i < 60 * 240 && w.state === 'playing'; i++) {
@@ -67,7 +67,7 @@ it('campaign pacing with a sloppy player who buys the cheapest upgrade', () => {
     for (;;) {
       tries++;
       const stats = statsFor(up);
-      const w = run(lv, stats, true, seed++);
+      const w = run(lv, stats, true, seed++, tries - 1);
       const won = w.state === 'won';
       coins += levelReward(lv, won, w.army.count, w.progress, stats.income) + w.coinsEarned;
       for (;;) {

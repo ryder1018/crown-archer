@@ -4,6 +4,8 @@ import type { UpgradeLevels } from './progression';
 export interface SaveData {
   version: 1;
   level: number;
+  /** consecutive losses on the current level */
+  failStreak: number;
   coins: number;
   upgrades: UpgradeLevels;
   settings: { sound: boolean; music: boolean; haptics: boolean };
@@ -16,6 +18,7 @@ export function defaultSave(): SaveData {
   return {
     version: 1,
     level: 1,
+    failStreak: 0,
     coins: 0,
     upgrades: { army: 0, rate: 0, damage: 0, income: 0 },
     settings: { sound: true, music: true, haptics: true },
@@ -33,6 +36,7 @@ export function parseSave(raw: string | null): SaveData {
       ...data,
       version: 1,
       level: Math.max(1, Math.floor(Number(data.level) || 1)),
+      failStreak: Math.max(0, Math.floor(Number(data.failStreak) || 0)),
       coins: Math.max(0, Math.floor(Number(data.coins) || 0)),
       upgrades: { ...base.upgrades, ...data.upgrades },
       settings: { ...base.settings, ...data.settings },

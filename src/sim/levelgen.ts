@@ -37,7 +37,9 @@ function badMod(rng: Rng, e: number, level: number): Mod {
  * Builds a level as a list of encounters along the track. The generator tracks `e`, the army size a
  * reasonably played run is expected to have, and sizes every encounter relative to it.
  */
-export function generateLevel(level: number): LevelSpec {
+export function generateLevel(level: number, failStreak = 0): LevelSpec {
+  // each failed attempt on the same level softens it a little, so nobody gets stuck for good
+  const ease = 1 - 0.1 * Math.min(5, failStreak);
   const rng = mulberry32(level * 9973 + 17);
   const ref = referenceStats(level);
   const perSoldierDps = ref.fireRate * ref.damage;
@@ -50,12 +52,14 @@ export function generateLevel(level: number): LevelSpec {
 
   for (let i = 0; i < segments; i++) {
     const roll = rng();
-    const type =
+    let type =
       i === 0 ? (level === 1 ? 'crates' : pick(rng, ['gates', 'crates'] as const))
       : roll < 0.36 ? 'gates'
       : roll < 0.66 ? 'squad'
       : roll < 0.84 ? 'crates'
       : 'barrel';
+    // level 1 is a tutorial without enemies; later levels let the army grow before the first fight
+    if (type === 'squad' && (level === 1 || i < 2)) type = rng() < 0.5 ? 'gates' : 'crates';
 
     if (type === 'gates') {
       const good = goodMod(rng, e, level);
@@ -72,10 +76,13 @@ export function generateLevel(level: number): LevelSpec {
       e = applyMod(e, good.op, good.value) * 0.95;
       d += irange(rng, 26, 32);
     } else if (type === 'squad') {
-      const count = Math.max(3, Math.round(e * range(rng, 0.35, 0.75)));
+      // the army shoots ~2.6s worth of volleys while a squad charges in; size squads so part of it arrives
+      const shotDown = e * perSoldierDps * 2.6;
+      const size = level <= 2 ? range(rng, 0.3, 0.5) : range(rng, 0.55, 0.95);
+      const count = Math.max(3, Math.round((shotDown * size + e * range(rng, 0.1, 0.3)) * ease));
       const x = range(rng, -2.2, 2.2);
       entities.push({ kind: 'squad', d: d + 6, x, count, charge: level > 3 && rng() < 0.5 });
-      e = Math.max(ref.startArmy, e - count * 0.45);
+      e = Math.max(ref.startArmy, e - Math.max(0, count - shotDown) * 0.9);
       d += irange(rng, 30, 36);
     } else if (type === 'crates') {
       const n = irange(rng, 6, 9);
@@ -105,7 +112,7 @@ export function generateLevel(level: number): LevelSpec {
   }
 
   const bossD = d + 36;
-  const bossTime = 7 + Math.min(9, level * 0.35);
+  const bossTime = (level <= 2 ? 3.5 : 7 + Math.min(9, level * 0.35)) * ease;
   entities.push({
     kind: 'boss',
     d: bossD,
