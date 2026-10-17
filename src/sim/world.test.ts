@@ -66,6 +66,23 @@ describe('world', () => {
     expect(w.gates[1].value).toBe(-10);
   });
 
+  it('the boss dies exactly once even when many arrows land together', () => {
+    const level: LevelSpec = {
+      level: 1, theme: 'river', bossD: 40,
+      entities: [{ kind: 'boss', d: 40, hp: 1, damage: 1, speed: 0 }],
+    };
+    const w = new World(level, statsFor({ army: 40, rate: 10, damage: 0, income: 0 }));
+    let deaths = 0;
+    let wins = 0;
+    for (let i = 0; i < 600 && w.state === 'playing'; i++) {
+      w.update(1 / 60);
+      deaths += w.events.filter((e) => e.type === 'bossDead').length;
+      wins += w.events.filter((e) => e.type === 'win').length;
+    }
+    expect(deaths).toBe(1);
+    expect(wins).toBe(1);
+  });
+
   it('spike traps hit only the soldiers that overlap them', () => {
     const level: LevelSpec = {
       level: 1, theme: 'river', bossD: 200,

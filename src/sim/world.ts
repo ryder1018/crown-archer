@@ -232,7 +232,7 @@ export class World {
       if (this.hitGates(ar, d0, d1, gates)) continue;
       if (this.hitBarrels(ar, d0, d1, barrels)) continue;
       if (this.hitSquads(ar, d0, d1, squads)) continue;
-      if (boss && Math.abs(ar.x - boss.x) < BOSS_HALF_WIDTH && d1 >= boss.d - 1.2 && d0 <= boss.d + 1.2) {
+      if (boss && boss.state !== 'dead' && Math.abs(ar.x - boss.x) < BOSS_HALF_WIDTH && d1 >= boss.d - 1.2 && d0 <= boss.d + 1.2) {
         ar.alive = false;
         boss.hp -= ar.dmg;
         boss.hitTime = this.time;
