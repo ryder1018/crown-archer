@@ -1,0 +1,33 @@
+import type { Stats } from '../sim/types';
+
+export type UpgradeKind = 'army' | 'rate' | 'damage' | 'income';
+export const UPGRADE_KINDS: UpgradeKind[] = ['army', 'rate', 'damage', 'income'];
+
+export type UpgradeLevels = Record<UpgradeKind, number>;
+
+export function statsFor(up: UpgradeLevels): Stats {
+  return {
+    startArmy: 3 + 2 * up.army,
+    fireRate: 1.5 * (1 + 0.07 * up.rate),
+    damage: 1 + 0.1 * up.damage,
+    income: 1 + 0.12 * up.income,
+  };
+}
+
+/** Stats a player is assumed to have when reaching `level`; levels are tuned against this. */
+export function referenceStats(level: number): Stats {
+  const lv = Math.floor(Math.max(0, level - 1) * 0.6);
+  return statsFor({ army: lv, rate: lv, damage: lv, income: lv });
+}
+
+export function upgradeCost(kind: UpgradeKind, lv: number): number {
+  const base = kind === 'income' ? 60 : 40;
+  return Math.round(base * Math.pow(1.28, lv) + 10 * lv);
+}
+
+export function levelReward(level: number, won: boolean, survivors: number, progress: number, income: number): number {
+  const raw = won
+    ? 30 + level * 10 + Math.min(survivors, 2000) * 0.2
+    : 5 + level * 2 + progress * 20;
+  return Math.round(raw * income);
+}

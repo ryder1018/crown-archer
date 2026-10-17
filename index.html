@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1b2a4a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="icon" type="image/png" href="./icon-192.png" />
+    <title>Crown Archers</title>
+  </head>
+  <body data-mode="home">
+    <div id="app">
+      <canvas id="scene"></canvas>
+      <div id="overlay"></div>
+
+      <!-- home -->
+      <div class="home ui">
+        <div class="topbar">
+          <div class="pill coins-pill"><i class="coin"></i><span id="coins">0</span></div>
+          <button id="btn-settings" class="icon-btn" aria-label="settings">
+            <svg viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 000-2l2.1-1.6-2-3.5-2.5 1a7.5 7.5 0 00-1.7-1L15 3.3h-4l-.4 2.6a7.5 7.5 0 00-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 000 2l-2.2 1.6 2 3.5 2.5-1a7.5 7.5 0 001.7 1l.4 2.6h4l.4-2.6a7.5 7.5 0 001.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z" transform="translate(-1 0)"/></svg>
+          </button>
+        </div>
+        <div class="logo">
+          <div class="crown">
+            <svg viewBox="0 0 64 40"><path d="M4 34L2 8l15 12L32 2l15 18L62 8l-2 26z" fill="#ffc93c" stroke="#8a4b00" stroke-width="3" stroke-linejoin="round"/><circle cx="32" cy="24" r="4" fill="#e23b3b"/><circle cx="16" cy="27" r="3" fill="#2f7bff"/><circle cx="48" cy="27" r="3" fill="#2f7bff"/></svg>
+          </div>
+          <h1 id="title"></h1>
+          <p id="subtitle"></p>
+        </div>
+        <div class="play-area">
+          <div id="home-level" class="level-chip"></div>
+          <button id="btn-play" class="btn-play"><span id="btn-play-label"></span></button>
+        </div>
+        <div id="upgrades" class="upgrades"></div>
+      </div>
+
+      <!-- in-game hud -->
+      <div class="hud ui">
+        <button id="btn-pause" class="icon-btn" aria-label="pause">
+          <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        </button>
+        <div class="hud-center">
+          <div id="hud-level"></div>
+          <div class="progress"><div id="progress-fill"></div><div class="progress-boss"></div></div>
+        </div>
+        <div id="hud-coins" class="pill coins-pill"><i class="coin"></i><span id="hud-coins-text">0</span></div>
+      </div>
+
+      <div id="hint" class="hint">
+        <div class="hand">
+          <svg viewBox="0 0 48 48"><path d="M18 22V9a3 3 0 016 0v10l9 2a4 4 0 013 4.6l-1.7 10A6 6 0 0128.4 41H21a6 6 0 01-4.9-2.6l-6.6-9.5a3 3 0 014.4-4z" fill="#fff" stroke="#1b2a4a" stroke-width="2.5" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="hint-track"></div>
+        <div id="hint-text"></div>
+      </div>
+
+      <div id="banner" class="banner"></div>
+
+      <!-- modals -->
+      <div id="pause" class="modal">
+        <div class="card">
+          <h2 id="pause-title"></h2>
+          <button id="btn-resume" class="btn btn-primary"></button>
+          <button id="btn-restart" class="btn"></button>
+          <button id="btn-quit" class="btn"></button>
+        </div>
+      </div>
+
+      <div id="result" class="modal">
+        <div class="card result-card">
+          <div class="rays"></div>
+          <div id="result-level" class="result-level"></div>
+          <h2 id="result-title"></h2>
+          <div id="result-detail" class="result-detail"></div>
+          <div class="result-coins"><i class="coin big"></i><span id="result-coins">+0</span></div>
+          <button id="btn-next" class="btn btn-primary"></button>
+        </div>
+      </div>
+
+      <div id="settings" class="modal">
+        <div class="card">
+          <h2 id="settings-title"></h2>
+          <div class="setting-row"><span id="lbl-sound"></span><button id="set-sound" class="toggle"></button></div>
+          <div class="setting-row"><span id="lbl-music"></span><button id="set-music" class="toggle"></button></div>
+          <div class="setting-row"><span id="lbl-haptics"></span><button id="set-haptics" class="toggle"></button></div>
+          <a id="lbl-privacy" class="link" href="https://ryder1018.github.io/crown-archers/privacy.html" target="_blank" rel="noopener"></a>
+          <button id="btn-settings-close" class="btn btn-primary"></button>
+          <div id="version" class="version"></div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
