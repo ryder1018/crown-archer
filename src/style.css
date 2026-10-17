@@ -499,6 +499,35 @@ body[data-mode='result'] .hud {
   border: 2px solid #fff;
 }
 
+.buffs {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.buff {
+  display: none;
+  padding: 3px 9px 4px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  animation: pop 0.3s;
+}
+
+.buff.on {
+  display: inline-block;
+}
+
+.buff-rapid {
+  background: linear-gradient(#ffcf4d, #f08c00);
+}
+
+.buff-multi {
+  background: linear-gradient(#ff7a6b, #d0222d);
+}
+
 #hud-coins {
   position: absolute;
   right: 14px;
@@ -570,6 +599,16 @@ body[data-mode='result'] .hud {
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
   pointer-events: none;
   opacity: 0;
+}
+
+.banner.tip {
+  top: 44%;
+  font-size: 26px;
+  background: linear-gradient(90deg, transparent, rgba(25, 80, 200, 0.85) 20%, rgba(25, 80, 200, 0.85) 80%, transparent);
+}
+
+.banner.tip.show {
+  animation-duration: 3s;
 }
 
 .banner.show {

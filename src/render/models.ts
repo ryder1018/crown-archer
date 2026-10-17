@@ -122,12 +122,19 @@ export interface BossRig {
 }
 
 /** Big brute with a club. Built as a rig so the arms can swing. Faces +z. */
-export function bossRig(): BossRig {
+export const BOSS_COLORS = {
+  river: { skin: 0xd99a6c, shirt: 0xd6452b, pants: 0x5a3a28 },
+  meadow: { skin: 0x9bbf5a, shirt: 0x8a4b2a, pants: 0x4a3a2a },
+  snow: { skin: 0xa9c8e8, shirt: 0x3f5f9a, pants: 0x2d3a55 },
+  desert: { skin: 0xc98a5a, shirt: 0x7a3fa0, pants: 0x4a2a20 },
+};
+
+export function bossRig(colors = BOSS_COLORS.river): BossRig {
   const p = PALETTE;
   const mat = (c: number, emissive = 0) => new THREE.MeshLambertMaterial({ color: c, flatShading: true, emissive });
-  const skin = mat(0xd99a6c);
-  const shirt = mat(0xd6452b);
-  const pants = mat(0x5a3a28);
+  const skin = mat(colors.skin);
+  const shirt = mat(colors.shirt);
+  const pants = mat(colors.pants);
   const hair = mat(0x2a1a14);
   const belt = mat(0x3a2418);
   const eye = new THREE.MeshBasicMaterial({ color: 0xff2a2a });

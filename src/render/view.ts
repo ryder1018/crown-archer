@@ -3,7 +3,7 @@ import { t } from '../i18n';
 import { ARROW_RANGE, ARROW_SPEED, MAX_ARMY_DISPLAY, MAX_ARROWS, type Reward } from '../sim/types';
 import { type Barrel, type Gate, type World, type WorldEvent } from '../sim/world';
 import { buildEnvironment, THEMES, type Environment } from './environment';
-import { archerGeometry, arrowGeometry, barrelGeometry, bossRig, enemyGeometry, kingGroup, PALETTE, type BossRig } from './models';
+import { archerGeometry, arrowGeometry, barrelGeometry, BOSS_COLORS, bossRig, enemyGeometry, kingGroup, PALETTE, type BossRig } from './models';
 import { Overlay } from './overlay';
 import { Particles } from './particles';
 import { blobTexture, crateLabel, gateLabel, hpLabel, LabelTexture, ringTexture } from './textures';
@@ -20,7 +20,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 const RIGHT = new THREE.Vector3(1, 0, 0);
 const qx = new THREE.Quaternion();
 
-interface GateView { gate: Gate; group: THREE.Group; panel: THREE.Mesh; label: LabelTexture; mat: THREE.MeshBasicMaterial; fade: number }
+interface GateView { gate: Gate; group: THREE.Group; panel: THREE.Mesh; label: LabelTexture; mat: THREE.MeshBasicMaterial; fade: number; lastHit: number }
 interface BarrelView { barrel: Barrel; group: THREE.Group; body: THREE.Mesh; label: LabelTexture; sprite: THREE.Sprite | null }
 
 function slot(i: number, out: { x: number; z: number }) {
@@ -164,7 +164,7 @@ export class GameView {
       group.position.set((g.x0 + g.x1) / 2, 0, -g.d);
       this.levelGroup.add(group);
       this.levelDisposables.push(label, mat);
-      this.gates.push({ gate: g, group, panel, label, mat, fade: 1 });
+      this.gates.push({ gate: g, group, panel, label, mat, fade: 1, lastHit: -1 });
     }
 
     const barrelGeo = this.keep(barrelGeometry());
@@ -201,7 +201,7 @@ export class GameView {
       this.barrels.push({ barrel: b, group, body, label, sprite });
     }
 
-    this.boss = bossRig();
+    this.boss = bossRig(BOSS_COLORS[world.level.theme]);
     this.boss.root.position.set(0, 0, -world.boss.d);
     this.boss.root.scale.setScalar(1.6);
     this.bossShadow = new THREE.Mesh(
@@ -414,6 +414,11 @@ export class GameView {
       gv.label.set(`${gateText(g)}|${gateIsGood(g) ? 1 : 0}`);
       const since = world.time - g.hitTime;
       let pulse = g.hitTime >= 0 && since < 0.12 ? 1 + (0.12 - since) * 0.6 : 1;
+      if (g.hitTime !== gv.lastHit && g.hitTime >= 0) {
+        gv.lastHit = g.hitTime;
+        const x = g.x0 + 0.6 + Math.random() * (g.x1 - g.x0 - 1.2);
+        this.particles.burst(x, 1.2 + Math.random() * 1.2, -g.d + 0.2, 0xfff1b0, 2, 2.5, 0.08, 0.35);
+      }
       if (g.passed) {
         gv.fade = Math.max(0, gv.fade - dt * (g.chosen ? 2.2 : 3));
         gv.mat.opacity = gv.fade;

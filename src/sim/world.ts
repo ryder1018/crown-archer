@@ -156,7 +156,9 @@ export class World {
 
   private moveArmy(dt: number) {
     const a = this.army;
-    a.x += (a.targetX - a.x) * Math.min(1, dt * 12);
+    // keep big formations on the bridge
+    const limit = ROAD_HALF_WIDTH - 0.5 - Math.max(0, this.armyRadius - 0.8) * 0.8;
+    a.x += (clamp(a.targetX, -limit, limit) - a.x) * Math.min(1, dt * 12);
     a.engaged = this.squads.some((s) => s.engaged);
     const arenaD = this.boss.d - BOSS_ARENA_GAP;
     if (!a.engaged && a.d < arenaD) a.d = Math.min(arenaD, a.d + ARMY_SPEED * dt);

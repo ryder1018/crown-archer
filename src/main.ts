@@ -37,6 +37,7 @@ class Game {
   private dragStartX = 0;
   private dragStartTarget = 0;
   private bossAnnounced = false;
+  private gateTipShown = false;
   private hintShown = false;
   private readonly isNative = Capacitor.isNativePlatform();
 
@@ -88,6 +89,7 @@ class Game {
     this.world = new World(level, statsFor(this.save.upgrades), (Date.now() & 0xffff) + 1);
     this.view.load(this.world);
     this.bossAnnounced = false;
+    this.gateTipShown = false;
   }
 
   // ---------- loop ----------
@@ -159,6 +161,13 @@ class Game {
           break;
         default:
           break;
+      }
+    }
+    if (!this.gateTipShown && this.save.level >= 3 && this.save.level <= 4) {
+      const g = w.gates.find((x) => !x.passed && x.op === 'add' && x.value < 0 && x.d - w.army.d < 34);
+      if (g) {
+        this.gateTipShown = true;
+        this.banner(t.gateTip, 'tip');
       }
     }
     if (!this.bossAnnounced && w.boss.state === 'walk') {
@@ -365,9 +374,10 @@ class Game {
     $(sel).classList.remove('show');
   }
 
-  private banner(text: string) {
+  private banner(text: string, kind: 'boss' | 'tip' = 'boss') {
     const b = $('#banner');
     b.textContent = text;
+    b.classList.toggle('tip', kind === 'tip');
     b.classList.remove('show');
     void b.offsetWidth;
     b.classList.add('show');
@@ -443,7 +453,16 @@ class Game {
   }
 
   private updateHud() {
+    const a = this.world.army;
     $('#progress-fill').style.transform = `scaleX(${this.world.progress.toFixed(3)})`;
+    const rapid = $('#buff-rapid');
+    rapid.classList.toggle('on', a.rapidTimer > 0);
+    const rapidText = `${t.reward_rapid} ${Math.ceil(a.rapidTimer)}s`;
+    if (a.rapidTimer > 0 && rapid.textContent !== rapidText) rapid.textContent = rapidText;
+    const multi = $('#buff-multi');
+    multi.classList.toggle('on', a.multishot > 1);
+    const multiText = `${t.reward_multi} x${a.multishot}`;
+    if (a.multishot > 1 && multi.textContent !== multiText) multi.textContent = multiText;
   }
 
   /** Lets the screenshot script fast-forward a level with the autopilot. */
