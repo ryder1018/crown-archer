@@ -85,6 +85,84 @@ export function enemyGeometry() {
   ]);
 }
 
+/** Enemy archer: red tunic, hood and a bow, facing +z. */
+export function enemyArcherGeometry() {
+  const p = PALETTE;
+  return merge([
+    [at(new THREE.BoxGeometry(0.11, 0.28, 0.12), -0.08, 0.14, 0), p.boot],
+    [at(new THREE.BoxGeometry(0.11, 0.28, 0.12), 0.08, 0.14, 0), p.boot],
+    [at(new THREE.CylinderGeometry(0.16, 0.21, 0.38, 7), 0, 0.46, 0), 0xb8322f],
+    [at(new THREE.IcosahedronGeometry(0.14, 0), 0, 0.76, 0), p.skin],
+    [at(new THREE.BoxGeometry(0.04, 0.05, 0.03), -0.05, 0.75, 0.13), 0x1a1a2a],
+    [at(new THREE.BoxGeometry(0.04, 0.05, 0.03), 0.05, 0.75, 0.13), 0x1a1a2a],
+    [at(new THREE.ConeGeometry(0.2, 0.36, 7), 0, 0.9, -0.03), 0x6e1c1c],
+    [at(new THREE.TorusGeometry(0.26, 0.022, 3, 8, Math.PI), -0.2, 0.52, 0.08, 0, Math.PI / 2, Math.PI / 2), p.wood],
+    [at(new THREE.BoxGeometry(0.1, 0.3, 0.08), 0.04, 0.5, -0.17, -0.2), p.woodDark],
+  ]);
+}
+
+/** Heavy infantry in steel plate with a tower shield. */
+export function armoredGeometry() {
+  const p = PALETTE;
+  const steel = 0x8d99a8;
+  const steelDark = 0x5d6878;
+  return merge([
+    [at(new THREE.BoxGeometry(0.13, 0.3, 0.14), -0.09, 0.15, 0), steelDark],
+    [at(new THREE.BoxGeometry(0.13, 0.3, 0.14), 0.09, 0.15, 0), steelDark],
+    [at(new THREE.CylinderGeometry(0.2, 0.25, 0.42, 7), 0, 0.5, 0), steel],
+    [at(new THREE.CylinderGeometry(0.26, 0.26, 0.06, 7), 0, 0.36, 0), p.red],
+    [at(new THREE.CylinderGeometry(0.17, 0.18, 0.3, 7), 0, 0.84, 0), steel],
+    [at(new THREE.BoxGeometry(0.2, 0.04, 0.03), 0, 0.84, 0.17), 0x111111],
+    [at(new THREE.BoxGeometry(0.05, 0.22, 0.3), 0, 1.06, -0.02), p.red],
+    [at(new THREE.BoxGeometry(0.42, 0.56, 0.06), 0.03, 0.5, 0.26), p.redDark],
+    [at(new THREE.BoxGeometry(0.1, 0.4, 0.07), 0.03, 0.52, 0.28), p.gold],
+  ]);
+}
+
+/** Skeleton warrior summoned by the lich. */
+export function skeletonGeometry() {
+  const bone = 0xe8e2d0;
+  const dark = 0x2a1a3a;
+  return merge([
+    [at(new THREE.BoxGeometry(0.06, 0.3, 0.06), -0.07, 0.15, 0), bone],
+    [at(new THREE.BoxGeometry(0.06, 0.3, 0.06), 0.07, 0.15, 0), bone],
+    [at(new THREE.BoxGeometry(0.2, 0.06, 0.1), 0, 0.32, 0), bone],
+    [at(new THREE.BoxGeometry(0.05, 0.3, 0.05), 0, 0.48, 0), bone],
+    [at(new THREE.BoxGeometry(0.26, 0.04, 0.12), 0, 0.5, 0), bone],
+    [at(new THREE.BoxGeometry(0.24, 0.04, 0.12), 0, 0.58, 0), bone],
+    [at(new THREE.IcosahedronGeometry(0.15, 0), 0, 0.77, 0), bone],
+    [at(new THREE.BoxGeometry(0.05, 0.05, 0.03), -0.055, 0.78, 0.13), 0x6aff8a],
+    [at(new THREE.BoxGeometry(0.05, 0.05, 0.03), 0.055, 0.78, 0.13), 0x6aff8a],
+    [at(new THREE.BoxGeometry(0.04, 0.42, 0.04), 0.2, 0.55, 0.06, 0.4), 0x8a96a8],
+    [at(new THREE.BoxGeometry(0.22, 0.32, 0.04), -0.08, 0.6, 0.12, 0.2), dark],
+  ]);
+}
+
+/** Lancer on horseback; about 1.6 long along z, facing +z. */
+export function cavalryGeometry() {
+  const p = PALETTE;
+  const horse = 0x6b4a32;
+  const horseDark = 0x3e2a1c;
+  const parts: Part[] = [
+    [at(new THREE.BoxGeometry(0.42, 0.42, 1.0), 0, 0.62, 0), horse],
+    [at(new THREE.BoxGeometry(0.26, 0.5, 0.3), 0, 0.92, 0.48, -0.5), horse],
+    [at(new THREE.BoxGeometry(0.22, 0.24, 0.42), 0, 1.12, 0.72), horse],
+    [at(new THREE.BoxGeometry(0.06, 0.3, 0.3), 0, 1.0, 0.32, -0.5), horseDark],
+    [at(new THREE.BoxGeometry(0.08, 0.32, 0.08), 0, 0.62, -0.55, 0.6), horseDark],
+    [at(new THREE.BoxGeometry(0.46, 0.08, 0.5), 0, 0.86, -0.02), p.red],
+    // rider
+    [at(new THREE.CylinderGeometry(0.15, 0.19, 0.34, 7), 0, 1.08, -0.05), p.red],
+    [at(new THREE.IcosahedronGeometry(0.13, 0), 0, 1.36, -0.05), p.skin],
+    [at(new THREE.SphereGeometry(0.15, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0, 1.4, -0.05), p.redDark],
+    [at(new THREE.BoxGeometry(0.04, 0.04, 1.2), 0.2, 1.1, 0.35), 0x8a96a8],
+    [at(new THREE.ConeGeometry(0.05, 0.16, 4), 0.2, 1.1, 0.98, Math.PI / 2), p.steel],
+  ];
+  for (const [x, z] of [[-0.14, 0.38], [0.14, 0.38], [-0.14, -0.38], [0.14, -0.38]]) {
+    parts.push([at(new THREE.BoxGeometry(0.1, 0.44, 0.1), x, 0.22, z), horseDark]);
+  }
+  return merge(parts);
+}
+
 export function kingGroup() {
   const p = PALETTE;
   const geo = merge([
@@ -111,103 +189,12 @@ export function kingGroup() {
   return mesh;
 }
 
-export interface BossRig {
-  root: THREE.Group;
-  body: THREE.Group;
-  armL: THREE.Group;
-  armR: THREE.Group;
-  legL: THREE.Mesh;
-  legR: THREE.Mesh;
-  materials: THREE.MeshLambertMaterial[];
-}
-
-/** Big brute with a club. Built as a rig so the arms can swing. Faces +z. */
-export const BOSS_COLORS = {
-  river: { skin: 0xd99a6c, shirt: 0xd6452b, pants: 0x5a3a28 },
-  meadow: { skin: 0x9bbf5a, shirt: 0x8a4b2a, pants: 0x4a3a2a },
-  snow: { skin: 0xa9c8e8, shirt: 0x3f5f9a, pants: 0x2d3a55 },
-  desert: { skin: 0xc98a5a, shirt: 0x7a3fa0, pants: 0x4a2a20 },
-};
-
-export function bossRig(colors = BOSS_COLORS.river): BossRig {
-  const p = PALETTE;
-  const mat = (c: number, emissive = 0) => new THREE.MeshLambertMaterial({ color: c, flatShading: true, emissive });
-  const skin = mat(colors.skin);
-  const shirt = mat(colors.shirt);
-  const pants = mat(colors.pants);
-  const hair = mat(0x2a1a14);
-  const belt = mat(0x3a2418);
-  const eye = new THREE.MeshBasicMaterial({ color: 0xff2a2a });
-  const wood = mat(p.wood);
-  const materials = [skin, shirt, pants, hair, belt, wood];
-
-  const root = new THREE.Group();
-  const body = new THREE.Group();
-  root.add(body);
-
-  const legGeo = new THREE.BoxGeometry(0.75, 1.4, 0.8);
-  legGeo.translate(0, -0.7, 0);
-  const legL = new THREE.Mesh(legGeo, pants);
-  legL.position.set(-0.55, 1.5, 0);
-  const legR = new THREE.Mesh(legGeo, pants);
-  legR.position.set(0.55, 1.5, 0);
-  root.add(legL, legR);
-
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.05, 1.9, 8), shirt);
-  torso.position.y = 2.45;
-  const beltM = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.3, 8), belt);
-  beltM.position.y = 1.6;
-  const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.1), mat(p.gold));
-  buckle.position.set(0, 1.6, 1.1);
-  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.72, 1), skin);
-  head.position.y = 3.95;
-  head.scale.set(1, 1.05, 0.95);
-  const hairM = new THREE.Mesh(new THREE.SphereGeometry(0.76, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2.2), hair);
-  hairM.position.set(0, 4.05, -0.05);
-  const brow = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 0.15), hair);
-  brow.position.set(0, 4.12, 0.62);
-  brow.rotation.x = -0.2;
-  const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.05), eye);
-  eyeL.position.set(-0.24, 3.98, 0.68);
-  const eyeR = eyeL.clone();
-  eyeR.position.x = 0.24;
-  const strap = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.2, 0.1), belt);
-  strap.position.set(0, 2.5, 1.12);
-  strap.rotation.z = 0.6;
-  body.add(torso, beltM, buckle, head, hairM, brow, eyeL, eyeR, strap);
-
-  const mkArm = (side: number) => {
-    const arm = new THREE.Group();
-    arm.position.set(side * 1.45, 3.15, 0);
-    const upper = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.5, 0.65), skin);
-    upper.position.y = -0.7;
-    const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.75), shirt);
-    sleeve.position.y = -0.15;
-    const fist = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 0), skin);
-    fist.position.y = -1.55;
-    arm.add(upper, sleeve, fist);
-    body.add(arm);
-    return arm;
-  };
-  const armL = mkArm(-1);
-  const armR = mkArm(1);
-  const club = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.16, 2.6, 7), wood);
-  club.position.set(0, -2.3, 0.9);
-  club.rotation.x = Math.PI / 2.6;
-  armR.add(club);
-
-  root.traverse((o) => {
-    if (o instanceof THREE.Mesh) o.castShadow = false;
-  });
-  return { root, body, armL, armR, legL, legR, materials };
-}
-
-export function arrowGeometry() {
+export function arrowGeometry(shaft = 0xfff4d6, fletch = 0xff6a3d, tip = 0xe8f0ff) {
   return merge([
-    [at(new THREE.BoxGeometry(0.08, 0.08, 1.2), 0, 0, 0), 0xfff4d6],
-    [at(new THREE.ConeGeometry(0.12, 0.3, 4), 0, 0, -0.74, -Math.PI / 2), 0xe8f0ff],
-    [at(new THREE.BoxGeometry(0.26, 0.03, 0.26), 0, 0, 0.5, 0, Math.PI / 4), 0xff6a3d],
-    [at(new THREE.BoxGeometry(0.03, 0.26, 0.26), 0, 0, 0.5, Math.PI / 4), 0xff6a3d],
+    [at(new THREE.BoxGeometry(0.08, 0.08, 1.2), 0, 0, 0), shaft],
+    [at(new THREE.ConeGeometry(0.12, 0.3, 4), 0, 0, -0.74, -Math.PI / 2), tip],
+    [at(new THREE.BoxGeometry(0.26, 0.03, 0.26), 0, 0, 0.5, 0, Math.PI / 4), fletch],
+    [at(new THREE.BoxGeometry(0.03, 0.26, 0.26), 0, 0, 0.5, Math.PI / 4), fletch],
   ]);
 }
 
@@ -221,7 +208,42 @@ export function barrelGeometry() {
   ]);
 }
 
-export function treeGeometry(kind: 'pine' | 'round' | 'cactus' | 'rock') {
+export type DecorKind = 'pine' | 'round' | 'cactus' | 'rock' | 'snowpine' | 'deadtree' | 'grave' | 'lavarock';
+
+export function treeGeometry(kind: DecorKind) {
+  if (kind === 'snowpine') {
+    return merge([
+      [at(new THREE.CylinderGeometry(0.15, 0.2, 0.8, 5), 0, 0.4, 0), 0x6b4423],
+      [at(new THREE.ConeGeometry(1.0, 1.6, 6), 0, 1.4, 0), 0x2f6d55],
+      [at(new THREE.ConeGeometry(0.78, 0.5, 6), 0, 1.95, 0), 0xf2f7fc],
+      [at(new THREE.ConeGeometry(0.75, 1.3, 6), 0, 2.2, 0), 0x3a8065],
+      [at(new THREE.ConeGeometry(0.45, 0.5, 6), 0, 2.75, 0), 0xf2f7fc],
+    ]);
+  }
+  if (kind === 'deadtree') {
+    return merge([
+      [at(new THREE.CylinderGeometry(0.14, 0.24, 2.2, 5), 0, 1.1, 0), 0x4a3c3a],
+      [at(new THREE.CylinderGeometry(0.05, 0.09, 1.0, 4), 0.35, 1.9, 0, 0, 0, -0.8), 0x4a3c3a],
+      [at(new THREE.CylinderGeometry(0.04, 0.08, 0.8, 4), -0.3, 1.6, 0.1, 0.2, 0, 0.9), 0x4a3c3a],
+      [at(new THREE.CylinderGeometry(0.03, 0.06, 0.6, 4), 0.05, 2.4, -0.2, -0.6, 0, 0.2), 0x4a3c3a],
+    ]);
+  }
+  if (kind === 'grave') {
+    return merge([
+      [at(new THREE.BoxGeometry(0.7, 0.9, 0.2), 0, 0.45, 0), 0x8a8f9c],
+      [at(new THREE.CylinderGeometry(0.35, 0.35, 0.2, 8, 1, false, 0, Math.PI), 0, 0.9, 0, Math.PI / 2, 0, Math.PI / 2), 0x8a8f9c],
+      [at(new THREE.BoxGeometry(0.9, 0.12, 0.6), 0, 0.06, 0.25), 0x4e4a3e],
+      [at(new THREE.BoxGeometry(0.1, 0.5, 0.06), 1.0, 0.35, 0.2), 0x6a6f7c],
+      [at(new THREE.BoxGeometry(0.34, 0.08, 0.06), 1.0, 0.45, 0.2), 0x6a6f7c],
+    ]);
+  }
+  if (kind === 'lavarock') {
+    return merge([
+      [at(new THREE.DodecahedronGeometry(0.9, 0), 0, 0.3, 0), 0x2e2624],
+      [at(new THREE.DodecahedronGeometry(0.55, 0), 0.8, 0.15, 0.3), 0x3a302d],
+      [at(new THREE.ConeGeometry(0.5, 1.4, 5), -0.4, 0.8, -0.2), 0x2e2624],
+    ]);
+  }
   if (kind === 'pine') {
     return merge([
       [at(new THREE.CylinderGeometry(0.15, 0.2, 0.8, 5), 0, 0.4, 0), 0x6b4423],

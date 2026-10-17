@@ -17,6 +17,11 @@
       <div class="home ui">
         <div class="topbar">
           <div class="pill coins-pill"><i class="coin"></i><span id="coins">0</span></div>
+          <button id="btn-skill-select" class="skill-chip">
+            <span id="chip-icon" class="skill-icon"></span>
+            <span class="chip-text"><b id="chip-name"></b><small id="chip-sub"></small></span>
+            <span id="chip-new" class="chip-new">NEW</span>
+          </button>
           <button id="btn-settings" class="icon-btn" aria-label="settings">
             <svg viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 000-2l2.1-1.6-2-3.5-2.5 1a7.5 7.5 0 00-1.7-1L15 3.3h-4l-.4 2.6a7.5 7.5 0 00-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 000 2l-2.2 1.6 2 3.5 2.5-1a7.5 7.5 0 001.7 1l.4 2.6h4l.4-2.6a7.5 7.5 0 001.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z" transform="translate(-1 0)"/></svg>
           </button>
@@ -43,9 +48,16 @@
         <div class="hud-center">
           <div id="hud-level"></div>
           <div class="progress"><div id="progress-fill"></div><div class="progress-boss"></div></div>
-          <div class="buffs"><span id="buff-rapid" class="buff buff-rapid"></span><span id="buff-multi" class="buff buff-multi"></span></div>
+          <div class="buffs">
+            <span id="buff-rapid" class="buff buff-rapid"></span><span id="buff-multi" class="buff buff-multi"></span><span id="buff-fire" class="buff buff-fire"></span><span id="buff-frost" class="buff buff-frost"></span><span id="buff-freeze" class="buff buff-freeze"></span>
+          </div>
         </div>
         <div id="hud-coins" class="pill coins-pill"><i class="coin"></i><span id="hud-coins-text">0</span></div>
+        <button id="btn-skill" class="skill-btn" aria-label="skill">
+          <span class="skill-fill"></span>
+          <span class="skill-face"><span id="skill-icon" class="skill-icon"></span></span>
+          <span id="skill-label" class="skill-label"></span>
+        </button>
       </div>
 
       <div id="hint" class="hint">

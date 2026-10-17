@@ -10,8 +10,9 @@ import { levelReward, statsFor, upgradeCost, UPGRADE_KINDS, type UpgradeKind } f
 import { loadSave, writeSave, type SaveData } from './meta/save';
 import { GameView } from './render/view';
 import { botSteer } from './sim/bot';
+import { REWARD_FROM, SKILL_UNLOCK, SKILLS, unlockedSkills } from './sim/content';
 import { generateLevel } from './sim/levelgen';
-import { ROAD_HALF_WIDTH } from './sim/types';
+import { ROAD_HALF_WIDTH, type SkillKind } from './sim/types';
 import { World } from './sim/world';
 
 type Mode = 'home' | 'playing' | 'paused' | 'result';
@@ -25,6 +26,14 @@ const UPGRADE_ICONS: Record<UpgradeKind, string> = {
   damage: '<svg viewBox="0 0 24 24"><path d="M3 21l3-1 9-9-2-2-9 9zm11-13l2 2 5-5V3h-2z"/><path d="M5 13l6 6-1.5 1.5-6-6z"/></svg>',
   income: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="18" rx="8" ry="3"/><path d="M4 18v-3c0 1.7 3.6 3 8 3s8-1.3 8-3v3" opacity=".7"/><ellipse cx="12" cy="13" rx="8" ry="3"/><path d="M4 13v-3c0 1.7 3.6 3 8 3s8-1.3 8-3v3" opacity=".7"/><ellipse cx="12" cy="8" rx="8" ry="3"/><path d="M4 8V5c0 1.7 3.6 3 8 3s8-1.3 8-3v3" opacity=".7"/><ellipse cx="12" cy="5" rx="8" ry="3"/></svg>',
 };
+
+const SKILL_ICONS: Record<SkillKind, string> = {
+  storm: '<svg viewBox="0 0 24 24"><path d="M5 2h2v9l2-2 1.4 1.4L6 14.8 1.6 10.4 3 9l2 2zm7 3h2v9l2-2 1.4 1.4L13 17.8l-4.4-4.4L10 12l2 2zm6-3h2v9l2-2 1.4 1.4-4.4 4.4-4.4-4.4L16 9l2 2z"/><rect x="2" y="20" width="20" height="2" rx="1"/></svg>',
+  freeze: '<svg viewBox="0 0 24 24"><path d="M11 1h2v4.6l2.3-2.3 1.4 1.4L13 8.4V11h2.6l3.7-3.7 1.4 1.4L18.4 11H23v2h-4.6l2.3 2.3-1.4 1.4-3.7-3.7H13v2.6l3.7 3.7-1.4 1.4-2.3-2.3V23h-2v-4.6l-2.3 2.3-1.4-1.4 3.7-3.7V13H8.4l-3.7 3.7-1.4-1.4L5.6 13H1v-2h4.6L3.3 8.7l1.4-1.4L8.4 11H11V8.4L7.3 4.7l1.4-1.4L11 5.6z"/></svg>',
+  horn: '<svg viewBox="0 0 24 24"><path d="M3 9h3l9-5v16l-9-5H3a1 1 0 01-1-1v-4a1 1 0 011-1zm4 7l1 5h3l-1.5-4.2zM18 7.5a6 6 0 010 9l-1.3-1.5a4 4 0 000-6zm2.5-2.7a9.5 9.5 0 010 14.4l-1.3-1.5a7.5 7.5 0 000-11.4z"/></svg>',
+};
+
+interface BannerMsg { title: string; sub?: string; kind: 'boss' | 'tip' | 'intro' }
 
 class Game {
   private save!: SaveData;
@@ -42,6 +51,9 @@ class Game {
   private readonly isNative = Capacitor.isNativePlatform();
   private perfFrames = 0;
   private perfTime = 0;
+  private banners: BannerMsg[] = [];
+  private bannerTimer: number | null = null;
+  private skillWasReady = false;
 
   constructor() {
     this.view = new GameView($('#scene'), $('#overlay'));
@@ -102,10 +114,27 @@ class Game {
 
   private newWorld() {
     const level = generateLevel(this.save.level, this.save.failStreak);
-    this.world = new World(level, statsFor(this.save.upgrades), (Date.now() & 0xffff) + 1);
+    this.world = new World(level, statsFor(this.save.upgrades), (Date.now() & 0xffff) + 1, this.equippedSkill());
     this.view.load(this.world);
     this.bossAnnounced = false;
     this.gateTipShown = false;
+    this.skillWasReady = false;
+    sfx.setTrack(level.theme);
+    this.clearBanners();
+  }
+
+  /** The chosen skill if unlocked, otherwise the newest unlocked one. */
+  private equippedSkill(): SkillKind | null {
+    const open = unlockedSkills(this.save.level);
+    if (this.save.skill && open.includes(this.save.skill)) return this.save.skill;
+    return open.at(-1) ?? null;
+  }
+
+  private markSeen(key: string) {
+    if (this.save.seen.includes(key)) return false;
+    this.save.seen.push(key);
+    void writeSave(this.save);
+    return true;
   }
 
   // ---------- loop ----------
@@ -187,6 +216,43 @@ class Game {
           sfx.crash();
           this.haptic('success');
           break;
+        case 'bossThrow':
+          sfx.whoosh();
+          break;
+        case 'shotLand':
+          sfx.crash();
+          if (ev.n > 0) this.haptic('medium');
+          break;
+        case 'bossSummon':
+          sfx.summon();
+          break;
+        case 'shieldUp':
+          sfx.shield();
+          break;
+        case 'bossEnrage':
+          sfx.roar(true);
+          this.haptic('heavy');
+          break;
+        case 'enemyVolley':
+          sfx.volley();
+          break;
+        case 'bomb':
+          sfx.boom();
+          this.haptic('heavy');
+          break;
+        case 'freeze':
+          sfx.freeze();
+          break;
+        case 'skill':
+          if (ev.skill === 'storm') sfx.storm();
+          else if (ev.skill === 'horn') sfx.horn();
+          this.haptic('medium');
+          break;
+        case 'chestOpen':
+          sfx.treasure();
+          this.bumpCoins();
+          this.haptic('success');
+          break;
         case 'win':
           this.finish(true);
           break;
@@ -201,13 +267,36 @@ class Game {
       const g = w.gates.find((x) => !x.passed && x.op === 'add' && x.value < 0 && x.d - w.army.d < 34);
       if (g) {
         this.gateTipShown = true;
-        this.banner(t.gateTip, 'tip');
+        this.banner({ title: t.gateTip, kind: 'tip' });
       }
     }
     if (!this.bossAnnounced && w.boss.state === 'walk') {
       this.bossAnnounced = true;
       sfx.roar();
-      this.banner(t.bossIncoming);
+      sfx.setTrack('boss');
+      const kind = w.boss.kind;
+      if (kind !== 'chest' && kind !== 'giant' && this.markSeen(`boss:${kind}`)) {
+        this.banner({ title: `${t.newBoss}：${t[`boss_${kind}`]}`, sub: t[`bossInfo_${kind}`], kind: 'boss' });
+      } else {
+        this.banner({ title: t.bossIncoming, kind: 'boss' });
+      }
+    }
+    this.introduceNewContent();
+  }
+
+  /** First encounters with a unit type or item get a short explanation. */
+  private introduceNewContent() {
+    const w = this.world;
+    for (const s of w.squads) {
+      if (s.gone || !s.aggro || s.unit === 'infantry' || s.unit === 'skeleton') continue;
+      if (this.markSeen(`unit:${s.unit}`)) this.banner({ title: t.newEnemy, sub: t[`unit_${s.unit}`], kind: 'intro' });
+    }
+    for (const b of w.barrels) {
+      if (b.broken || b.gone || b.small || b.d - w.army.d > 40) continue;
+      const type = b.reward.type;
+      if ((type === 'fire' || type === 'freeze' || type === 'bomb') && REWARD_FROM[type] > 1 && this.markSeen(`item:${type}`)) {
+        this.banner({ title: t.newItem, sub: t[`item_${type}`], kind: 'intro' });
+      }
     }
   }
 
@@ -242,6 +331,10 @@ class Game {
     window.addEventListener('pointercancel', end);
 
     $('#btn-play').addEventListener('click', () => this.start());
+    $('#btn-skill').addEventListener('click', () => {
+      if (this.mode === 'playing' && this.world.useSkill()) this.onEvents();
+    });
+    $('#btn-skill-select').addEventListener('click', () => this.cycleSkill());
     $('#btn-pause').addEventListener('click', () => this.pause());
     $('#btn-resume').addEventListener('click', () => this.resume());
     $('#btn-restart').addEventListener('click', () => {
@@ -326,6 +419,41 @@ class Game {
     $('#home-level').textContent = t.level(this.save.level);
     this.renderCoins();
     this.renderUpgrades();
+    this.renderSkillChip();
+    if (this.world) sfx.setTrack(this.world.level.theme);
+  }
+
+  private cycleSkill() {
+    const open = unlockedSkills(this.save.level);
+    this.click();
+    if (!open.length) return;
+    const current = this.equippedSkill();
+    const next = open[(open.indexOf(current ?? open[0]) + 1) % open.length];
+    this.save.skill = next;
+    this.markSeen(`skill:${next}`);
+    void writeSave(this.save);
+    this.newWorld();
+    this.renderSkillChip();
+  }
+
+  private renderSkillChip() {
+    const skill = this.equippedSkill();
+    const chip = $('#btn-skill-select');
+    const open = unlockedSkills(this.save.level);
+    chip.classList.toggle('locked', !skill);
+    if (skill) {
+      $('#chip-icon').innerHTML = SKILL_ICONS[skill];
+      $('#chip-name').textContent = `${t.skill}：${t[`skill_${skill}`]}`;
+      $('#chip-sub').textContent = open.length > 1 ? `${t[`skillInfo_${skill}`]} · ⇄` : t[`skillInfo_${skill}`];
+    } else {
+      $('#chip-icon').innerHTML = SKILL_ICONS.storm;
+      $('#chip-name').textContent = t.skill;
+      $('#chip-sub').textContent = t.skillUnlock(SKILL_UNLOCK.storm);
+    }
+    // a freshly unlocked skill the player has not looked at yet
+    const fresh = open.some((k) => !this.save.seen.includes(`skill:${k}`));
+    $('#chip-new').style.display = fresh && open.length > 0 ? '' : 'none';
+    if (skill && open.length === 1) this.markSeen(`skill:${skill}`);
   }
 
   private start() {
@@ -341,6 +469,18 @@ class Game {
     if (this.save.level <= 2 && !this.hintShown) {
       this.hintShown = true;
       $('#hint').classList.add('show');
+    }
+    const skill = this.world.skill;
+    $('#btn-skill').classList.toggle('hidden', !skill);
+    if (skill) {
+      $('#skill-icon').innerHTML = SKILL_ICONS[skill];
+      $('#skill-label').textContent = t[`skill_${skill}`];
+    }
+    const theme = this.world.level.theme;
+    if (this.world.level.bonus) {
+      this.banner({ title: t.bonusLevel, sub: t.bonusInfo, kind: 'intro' });
+    } else if (theme !== 'river' && this.markSeen(`theme:${theme}`)) {
+      this.banner({ title: `${t.newRegion}：${t[`theme_${theme}`]}`, kind: 'intro' });
     }
   }
 
@@ -378,6 +518,7 @@ class Game {
     }
     void writeSave(this.save);
     this.hideHint();
+    this.clearBanners();
     // stop accepting input right away; the card appears after a short beat
     this.mode = 'result';
     this.dragging = false;
@@ -392,7 +533,10 @@ class Game {
       $('#result .result-card').classList.toggle('won', won);
       $('#result-title').textContent = won ? t.victory : t.defeat;
       $('#result-level').textContent = t.level(level);
-      $('#result-detail').textContent = won ? t.survivors(Math.round(w.army.count)) : t.reached(Math.round(w.progress * 100));
+      const unlocked = won ? SKILLS.find((k) => SKILL_UNLOCK[k] === level + 1) : undefined;
+      $('#result-detail').textContent = unlocked
+        ? `${t.newSkill}：${t[`skill_${unlocked}`]}！`
+        : won ? t.survivors(Math.round(w.army.count)) : t.reached(Math.round(w.progress * 100));
       $('#btn-next').textContent = won ? t.next : t.retry;
       this.countUp($('#result-coins'), reward);
       this.showModal('#result');
@@ -417,13 +561,51 @@ class Game {
     $(sel).classList.remove('show');
   }
 
-  private banner(text: string, kind: 'boss' | 'tip' = 'boss') {
+  /** Banners queue up so several introductions in a row stay readable. */
+  private banner(msg: BannerMsg) {
+    if (msg.kind === 'boss') {
+      // the boss entrance is the most important message: show it right away
+      this.banners = [msg];
+      if (this.bannerTimer !== null) window.clearTimeout(this.bannerTimer);
+      this.nextBanner();
+      return;
+    }
+    this.banners.push(msg);
+    if (this.bannerTimer === null) this.nextBanner();
+  }
+
+  private nextBanner() {
+    const msg = this.banners.shift();
     const b = $('#banner');
-    b.textContent = text;
-    b.classList.toggle('tip', kind === 'tip');
+    if (!msg) {
+      this.bannerTimer = null;
+      return;
+    }
+    b.innerHTML = '';
+    const title = document.createElement('div');
+    title.className = 'banner-title';
+    title.textContent = msg.title;
+    b.appendChild(title);
+    if (msg.sub) {
+      const sub = document.createElement('div');
+      sub.className = 'banner-sub';
+      sub.textContent = msg.sub;
+      b.appendChild(sub);
+    }
+    b.classList.toggle('tip', msg.kind === 'tip');
+    b.classList.toggle('intro', msg.kind === 'intro');
     b.classList.remove('show');
     void b.offsetWidth;
     b.classList.add('show');
+    const ms = msg.sub ? 2600 : 1800;
+    this.bannerTimer = window.setTimeout(() => this.nextBanner(), this.banners.length ? ms * 0.8 : ms);
+  }
+
+  private clearBanners() {
+    this.banners = [];
+    if (this.bannerTimer !== null) window.clearTimeout(this.bannerTimer);
+    this.bannerTimer = null;
+    $('#banner').classList.remove('show');
   }
 
   // ---------- economy ----------
@@ -506,6 +688,29 @@ class Game {
     multi.classList.toggle('on', a.multishot > 1);
     const multiText = `${t.reward_multi} x${a.multishot}`;
     if (a.multishot > 1 && multi.textContent !== multiText) multi.textContent = multiText;
+    this.timedBuff('#buff-fire', a.burnTimer, t.reward_fire);
+    this.timedBuff('#buff-frost', a.frostTimer, t.buff_frost);
+    this.timedBuff('#buff-freeze', this.world.freezeTimer, t.buff_freeze);
+
+    const w = this.world;
+    if (w.skill) {
+      const btn = $('#btn-skill');
+      const ready = w.skillCharge >= 1;
+      btn.style.setProperty('--charge', w.skillCharge.toFixed(3));
+      btn.classList.toggle('ready', ready);
+      if (ready && !this.skillWasReady) {
+        sfx.skillReady();
+        this.haptic('light');
+      }
+      this.skillWasReady = ready;
+    }
+  }
+
+  private timedBuff(sel: string, timer: number, label: string) {
+    const el = $(sel);
+    el.classList.toggle('on', timer > 0);
+    const text = `${label} ${Math.ceil(timer)}s`;
+    if (timer > 0 && el.textContent !== text) el.textContent = text;
   }
 
   /** Lets the screenshot script fast-forward a level with the autopilot. */

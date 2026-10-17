@@ -126,6 +126,21 @@ button {
   text-align: center;
 }
 
+.boss-name {
+  font: 15px/1.2 var(--font-ui);
+  color: #ffe9a8;
+  text-shadow: 0 2px 0 #000a, 0 0 4px #000a;
+  white-space: nowrap;
+}
+
+.boss-badge.shielded .boss-hp-fill {
+  background: linear-gradient(#9fe6ff, #3aa6d0);
+}
+
+.boss-badge.shielded .boss-hp-bar {
+  box-shadow: 0 0 10px #7fe8ff;
+}
+
 .boss-hp-text {
   font: 38px/1 var(--font-display);
   text-shadow: 0 3px 0 #000a, 0 0 6px #000a;
@@ -585,6 +600,19 @@ body[data-mode='result'] .hud {
   background: linear-gradient(#ffcf4d, #f08c00);
 }
 
+.buff-fire {
+  background: linear-gradient(#ff9a3a, #e2380e);
+}
+
+.buff-frost {
+  background: linear-gradient(#9fe6ff, #3a8fd0);
+}
+
+.buff-freeze {
+  background: linear-gradient(#cff4ff, #5ab8e8);
+  color: #0f3a5a;
+}
+
 .buff-multi {
   background: linear-gradient(#ff7a6b, #d0222d);
 }
@@ -597,6 +625,129 @@ body[data-mode='result'] .hud {
 
 #hud-coins.bump {
   animation: pop 0.3s;
+}
+
+/* ---------- skill ---------- */
+
+.skill-btn {
+  --charge: 0;
+  position: absolute;
+  right: 16px;
+  bottom: calc(var(--sab) + 26px);
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  background: conic-gradient(#ffd34a calc(var(--charge) * 360deg), rgba(20, 30, 60, 0.55) 0);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.3);
+  display: grid;
+  place-items: center;
+}
+
+.skill-btn.hidden {
+  display: none;
+}
+
+.skill-face {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(#6a7a99, #3d4a66);
+  transition: background 0.2s;
+}
+
+.skill-btn.ready .skill-face {
+  background: linear-gradient(#ffcf4d, #f08c00);
+}
+
+.skill-btn.ready {
+  animation: skillPulse 0.9s ease-in-out infinite;
+}
+
+.skill-btn:active {
+  transform: translateY(3px) scale(0.96);
+}
+
+.skill-icon svg {
+  width: 36px;
+  height: 36px;
+  fill: #fff;
+  display: block;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.3));
+}
+
+.skill-label {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 13px;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+.skill-chip {
+  position: relative;
+  display: flex;
+  max-width: 190px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 16px;
+  background: rgba(20, 30, 60, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  text-align: left;
+}
+
+.skill-chip .skill-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(#ffcf4d, #f08c00);
+}
+
+.skill-chip .skill-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.skill-chip.locked .skill-icon {
+  background: linear-gradient(#8b95a8, #5a6478);
+}
+
+.chip-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.chip-text b {
+  font-size: 15px;
+  font-weight: normal;
+}
+
+.chip-text small {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.chip-new {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: var(--red);
+  font: 11px/1.2 var(--font-display);
+  animation: pop 1s ease-in-out infinite;
+}
+
+@keyframes skillPulse {
+  0%, 100% { box-shadow: 0 5px 0 rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(255, 211, 74, 0.7); }
+  50% { box-shadow: 0 5px 0 rgba(0, 0, 0, 0.3), 0 0 0 12px rgba(255, 211, 74, 0); }
 }
 
 /* ---------- hint & banner ---------- */
@@ -652,13 +803,28 @@ body[data-mode='result'] .hud {
   left: 0;
   right: 0;
   top: 32%;
-  padding: 14px 0 16px;
+  padding: 14px 16px 16px;
   text-align: center;
-  font: 34px/1 var(--font-display);
+  font: 30px/1.15 var(--font-display);
   background: linear-gradient(90deg, transparent, rgba(160, 20, 30, 0.85) 20%, rgba(160, 20, 30, 0.85) 80%, transparent);
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
   pointer-events: none;
   opacity: 0;
+}
+
+.banner-sub {
+  margin-top: 8px;
+  font: 18px/1.2 var(--font-ui);
+  color: #ffe9a8;
+}
+
+.banner.intro {
+  background: linear-gradient(90deg, transparent, rgba(110, 50, 170, 0.88) 20%, rgba(110, 50, 170, 0.88) 80%, transparent);
+}
+
+.banner.intro.show,
+.banner:has(.banner-sub).show {
+  animation-duration: 2.6s;
 }
 
 .banner.tip {

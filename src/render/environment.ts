@@ -1,23 +1,38 @@
 import * as THREE from 'three';
 import { ROAD_HALF_WIDTH, type Theme } from '../sim/types';
-import { treeGeometry } from './models';
-import { groundTexture, seededNoise, stoneTexture, waterTexture } from './textures';
+import { treeGeometry, type DecorKind } from './models';
+import { groundTexture, lavaTexture, seededNoise, stoneTexture, waterTexture } from './textures';
 
 interface ThemeDef {
   sky: number;
   road: [string, string];
   ground: [string, string] | null;
+  /** what fills the sides when there is no ground */
+  liquid: 'water' | 'lava';
   wall: number;
   wallTop: number;
-  decor: ('pine' | 'round' | 'cactus' | 'rock')[];
+  decor: DecorKind[];
   hemiGround: number;
+  /** hemisphere / sun intensities and sun colour */
+  light: { hemi: number; sun: number; sunColor: number };
+  fog: [number, number];
 }
 
+const DAY = { hemi: 1.5, sun: 1.9, sunColor: 0xffffff };
+
 export const THEMES: Record<Theme, ThemeDef> = {
-  river: { sky: 0x8fd6ff, road: ['#e3d3b1', '#b09c7c'], ground: null, wall: 0xd8cbb0, wallTop: 0xeee3cb, decor: [], hemiGround: 0x3d7fbf },
-  meadow: { sky: 0x9fdcff, road: ['#d8c49e', '#a08b68'], ground: ['#74c44c', '#5fae3c'], wall: 0x9c6a3a, wallTop: 0xb98450, decor: ['round', 'pine', 'rock'], hemiGround: 0x4f8f3a },
-  snow: { sky: 0xc9e2f5, road: ['#cdd5df', '#919cab'], ground: ['#f2f7fc', '#d9e5f0'], wall: 0xb9c4d1, wallTop: 0xe6edf5, decor: ['pine', 'rock'], hemiGround: 0xbfd3e6 },
-  desert: { sky: 0xffe2ae, road: ['#e6c792', '#b8945e'], ground: ['#f2d395', '#ddb873'], wall: 0xc79c62, wallTop: 0xe0b77a, decor: ['cactus', 'rock'], hemiGround: 0xd9a65c },
+  river: { sky: 0x8fd6ff, road: ['#e3d3b1', '#b09c7c'], ground: null, liquid: 'water', wall: 0xd8cbb0, wallTop: 0xeee3cb, decor: [], hemiGround: 0x3d7fbf, light: DAY, fog: [55, 120] },
+  meadow: { sky: 0x9fdcff, road: ['#d8c49e', '#a08b68'], ground: ['#74c44c', '#5fae3c'], liquid: 'water', wall: 0x9c6a3a, wallTop: 0xb98450, decor: ['round', 'pine', 'rock'], hemiGround: 0x4f8f3a, light: DAY, fog: [55, 120] },
+  snow: { sky: 0xc9e2f5, road: ['#cdd5df', '#919cab'], ground: ['#f2f7fc', '#d9e5f0'], liquid: 'water', wall: 0xb9c4d1, wallTop: 0xe6edf5, decor: ['snowpine', 'rock'], hemiGround: 0xbfd3e6, light: DAY, fog: [55, 120] },
+  desert: { sky: 0xffe2ae, road: ['#e6c792', '#b8945e'], ground: ['#f2d395', '#ddb873'], liquid: 'water', wall: 0xc79c62, wallTop: 0xe0b77a, decor: ['cactus', 'rock'], hemiGround: 0xd9a65c, light: DAY, fog: [55, 120] },
+  volcano: {
+    sky: 0x5e2e28, road: ['#6d605c', '#352c2a'], ground: null, liquid: 'lava', wall: 0x4a3e3b, wallTop: 0x6b5c58,
+    decor: ['lavarock'], hemiGround: 0xff6a20, light: { hemi: 1.2, sun: 1.7, sunColor: 0xffc08a }, fog: [40, 105],
+  },
+  night: {
+    sky: 0x262b52, road: ['#8d93a6', '#565b6e'], ground: ['#36463a', '#2b382e'], liquid: 'water', wall: 0x5e6475, wallTop: 0x7f8698,
+    decor: ['deadtree', 'grave', 'grave'], hemiGround: 0x30365a, light: { hemi: 1.05, sun: 1.35, sunColor: 0xa8b8ff }, fog: [40, 100],
+  },
 };
 
 export interface Environment {
@@ -69,11 +84,13 @@ export function buildEnvironment(theme: Theme, length: number, endD: number): En
     ground.position.set(0, -0.6, startZ - total / 2);
     group.add(ground);
   } else {
-    water = track(waterTexture());
-    water.repeat.set(24, total / 10);
+    const lava = def.liquid === 'lava';
+    water = track(lava ? lavaTexture() : waterTexture());
+    water.repeat.set(lava ? 16 : 24, total / (lava ? 14 : 10));
     const sea = new THREE.Mesh(
       track(new THREE.PlaneGeometry(240, total)),
-      track(new THREE.MeshLambertMaterial({ map: water })),
+      // lava glows on its own, so it ignores the lighting
+      track(lava ? new THREE.MeshBasicMaterial({ map: water }) : new THREE.MeshLambertMaterial({ map: water })),
     );
     sea.rotation.x = -Math.PI / 2;
     sea.position.set(0, -0.9, startZ - total / 2);
@@ -114,7 +131,7 @@ export function buildEnvironment(theme: Theme, length: number, endD: number): En
       const p = new THREE.Vector3();
       for (let i = 0; i < n; i++) {
         const sx = rnd() < 0.5 ? -1 : 1;
-        p.set(sx * (ROAD_HALF_WIDTH + 2.4 + rnd() * 16), -0.6, startZ - rnd() * total);
+        p.set(sx * (ROAD_HALF_WIDTH + 2.4 + rnd() * 16), def.ground ? -0.6 : -1.0, startZ - rnd() * total);
         q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rnd() * Math.PI * 2);
         s.setScalar(0.8 + rnd() * 0.9);
         m.compose(p, q, s);
@@ -132,7 +149,7 @@ export function buildEnvironment(theme: Theme, length: number, endD: number): En
   return {
     group,
     update(dt: number) {
-      if (water) water.offset.y += dt * 0.04;
+      if (water) water.offset.y += dt * (def.liquid === 'lava' ? 0.015 : 0.04);
     },
     dispose() {
       for (const d of disposables) d.dispose();

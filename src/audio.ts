@@ -8,6 +8,7 @@ export class Sfx {
   private musicTimer: number | null = null;
   private musicStep = 0;
   private nextNoteTime = 0;
+  private track: TrackName = 'river';
   soundOn = true;
   musicOn = true;
 
@@ -130,8 +131,8 @@ export class Sfx {
     this.hiss(0.5, 300, 0.7, 0.4, 0, 'lowpass');
   }
 
-  roar() {
-    if (!this.ready('roar', 1)) return;
+  roar(rage = false) {
+    if (!this.ready(rage ? 'rage' : 'roar', 1)) return;
     this.tone(110, 0.8, 'sawtooth', 0.18, 70);
     this.tone(82, 0.9, 'sawtooth', 0.12, 55);
   }
@@ -140,6 +141,79 @@ export class Sfx {
     if (!this.ready('coin', 0.06)) return;
     this.tone(988, 0.07, 'square', 0.08);
     this.tone(1319, 0.2, 'square', 0.08, undefined, 0.07);
+  }
+
+  whoosh() {
+    if (!this.ready('whoosh', 0.2)) return;
+    const ctx = this.ctx!;
+    const t0 = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 3;
+    f.frequency.setValueAtTime(300, t0);
+    f.frequency.exponentialRampToValueAtTime(1600, t0 + 0.35);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.15);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.45);
+    src.connect(f).connect(g).connect(this.master!);
+    src.start(t0);
+    src.stop(t0 + 0.5);
+  }
+
+  boom() {
+    if (!this.ready('boom', 0.15)) return;
+    this.tone(70, 0.7, 'sine', 0.8, 30);
+    this.hiss(0.8, 400, 0.6, 0.6, 0, 'lowpass');
+    this.hiss(0.3, 2500, 1, 0.2);
+  }
+
+  freeze() {
+    if (!this.ready('freeze', 0.3)) return;
+    [1568, 2093, 2637, 3136].forEach((f, i) => this.tone(f, 0.5, 'sine', 0.1, f * 1.01, i * 0.05));
+    this.hiss(0.6, 7000, 2, 0.12);
+  }
+
+  shield() {
+    if (!this.ready('shield', 0.3)) return;
+    this.tone(440, 0.6, 'sine', 0.18, 880);
+    this.tone(660, 0.6, 'triangle', 0.08, 1320, 0.05);
+  }
+
+  summon() {
+    if (!this.ready('summon', 0.3)) return;
+    this.tone(98, 0.8, 'sawtooth', 0.12, 196);
+    this.tone(147, 0.8, 'sawtooth', 0.08, 98, 0.1);
+  }
+
+  volley() {
+    if (!this.ready('volley', 0.2)) return;
+    this.hiss(0.25, 3000, 1.2, 0.12);
+    this.hiss(0.18, 2200, 1.2, 0.1, 0.06);
+  }
+
+  storm() {
+    if (!this.ready('storm', 0.5)) return;
+    this.whoosh();
+    for (let i = 0; i < 8; i++) this.hiss(0.1, 2500 + Math.random() * 1500, 2, 0.1, 0.3 + i * 0.22);
+  }
+
+  horn() {
+    if (!this.ready('horn', 0.5)) return;
+    [196, 196, 261.6, 329.6].forEach((f, i) => this.tone(f, i === 3 ? 0.7 : 0.18, 'sawtooth', 0.12, undefined, i * 0.15));
+  }
+
+  treasure() {
+    if (!this.ready('treasure', 0.5)) return;
+    [1047, 1319, 1568, 2093, 1568, 2093, 2637].forEach((f, i) => this.tone(f, 0.15, 'square', 0.07, undefined, i * 0.07));
+  }
+
+  skillReady() {
+    if (!this.ready('skillReady', 0.5)) return;
+    this.tone(880, 0.12, 'triangle', 0.15);
+    this.tone(1320, 0.25, 'triangle', 0.15, undefined, 0.1);
   }
 
   click() {
@@ -157,7 +231,14 @@ export class Sfx {
     [392, 349, 311, 262].forEach((f, i) => this.tone(f, 0.3, 'triangle', 0.2, undefined, i * 0.2));
   }
 
-  /** A light marching loop: bass + plucked arpeggio, scheduled ahead with the audio clock. */
+  /** Procedural music: each region has its own loop and boss fights switch to a tenser one. */
+  setTrack(name: TrackName) {
+    if (this.track === name) return;
+    this.track = name;
+    this.musicStep = 0;
+    if (this.ctx) this.nextNoteTime = Math.max(this.nextNoteTime, this.ctx.currentTime + 0.05);
+  }
+
   startMusic() {
     if (!this.ctx || this.musicTimer !== null) return;
     this.nextNoteTime = this.ctx.currentTime + 0.1;
@@ -169,36 +250,87 @@ export class Sfx {
     this.musicTimer = null;
   }
 
+  private drum(kind: 'kick' | 'snare' | 'hat', t0: number, vol: number) {
+    const ctx = this.ctx!;
+    if (kind === 'kick') {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.setValueAtTime(140, t0);
+      o.frequency.exponentialRampToValueAtTime(45, t0 + 0.14);
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+      o.connect(g).connect(this.musicGain!);
+      o.start(t0);
+      o.stop(t0 + 0.2);
+      return;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = kind === 'hat' ? 'highpass' : 'bandpass';
+    f.frequency.value = kind === 'hat' ? 6500 : 1800;
+    const g = ctx.createGain();
+    const len = kind === 'hat' ? 0.05 : 0.14;
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+    src.connect(f).connect(g).connect(this.musicGain!);
+    src.start(t0, Math.random() * 0.3);
+    src.stop(t0 + len + 0.02);
+  }
+
   private scheduleMusic() {
     const ctx = this.ctx;
     if (!ctx || !this.musicGain || ctx.state !== 'running') return;
-    const stepDur = 60 / 112 / 2;
-    const chords = [[220, 261.6, 329.6], [174.6, 220, 261.6], [196, 246.9, 293.7], [164.8, 207.7, 246.9]];
+    const tr = TRACKS[this.track];
+    const stepDur = 60 / tr.bpm / 2;
     while (this.nextNoteTime < ctx.currentTime + 0.3) {
       const s = this.musicStep;
-      const chord = chords[Math.floor(s / 8) % chords.length];
+      const chord = tr.chords[Math.floor(s / 8) % tr.chords.length];
       const delay = Math.max(0, this.nextNoteTime - ctx.currentTime);
+      const t0 = this.nextNoteTime;
       if (s % 4 === 0) this.tone(chord[0] / 2, stepDur * 1.8, 'triangle', 0.5, undefined, delay, this.musicGain);
-      const note = chord[[0, 1, 2, 1][s % 4]] * 2;
-      this.tone(note, stepDur * 0.9, 'square', 0.12, undefined, delay, this.musicGain);
-      if (s % 2 === 1) {
-        const t0 = this.nextNoteTime;
-        const src = ctx.createBufferSource();
-        src.buffer = this.noise;
-        const f = ctx.createBiquadFilter();
-        f.type = 'highpass';
-        f.frequency.value = 6000;
-        const g = ctx.createGain();
-        g.gain.setValueAtTime(0.25, t0);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
-        src.connect(f).connect(g).connect(this.musicGain);
-        src.start(t0);
-        src.stop(t0 + 0.06);
+      if (tr.bass8 && s % 2 === 1) this.tone(chord[0] / 2, stepDur * 0.8, 'triangle', 0.3, undefined, delay, this.musicGain);
+      const idx = tr.pattern[s % tr.pattern.length];
+      if (idx >= 0) {
+        const note = chord[idx % 3] * (idx >= 3 ? 4 : 2);
+        this.tone(note, stepDur * tr.sustain, tr.lead, tr.leadVol, undefined, delay, this.musicGain);
+      }
+      const beat = s % 8;
+      if (tr.drums !== 'none') {
+        if (s % 2 === 1) this.drum('hat', t0, 0.18);
+        if (tr.drums === 'march' || tr.drums === 'heavy') {
+          if (beat === 0 || beat === 4 || (tr.drums === 'heavy' && beat === 6)) this.drum('kick', t0, tr.drums === 'heavy' ? 0.9 : 0.6);
+          if (beat === 2 || beat === 6) this.drum('snare', t0, 0.35);
+        }
       }
       this.musicStep++;
       this.nextNoteTime += stepDur;
     }
   }
 }
+
+export type TrackName = 'river' | 'meadow' | 'snow' | 'desert' | 'volcano' | 'night' | 'boss';
+
+interface Track {
+  bpm: number;
+  chords: number[][];
+  /** chord tone per eighth note (3+ = an octave up, -1 = rest) */
+  pattern: number[];
+  lead: OscillatorType;
+  leadVol: number;
+  sustain: number;
+  drums: 'none' | 'light' | 'march' | 'heavy';
+  bass8?: boolean;
+}
+
+const TRACKS: Record<TrackName, Track> = {
+  river: { bpm: 112, chords: [[220, 261.6, 329.6], [174.6, 220, 261.6], [196, 246.9, 293.7], [164.8, 207.7, 246.9]], pattern: [0, 1, 2, 1], lead: 'square', leadVol: 0.12, sustain: 0.9, drums: 'light' },
+  meadow: { bpm: 124, chords: [[261.6, 329.6, 392], [174.6, 220, 261.6], [196, 246.9, 293.7], [220, 261.6, 329.6]], pattern: [0, 2, 1, 2, 3, 2, 1, 2], lead: 'triangle', leadVol: 0.22, sustain: 0.8, drums: 'march' },
+  snow: { bpm: 92, chords: [[146.8, 174.6, 220], [116.5, 146.8, 174.6], [174.6, 220, 261.6], [130.8, 164.8, 196]], pattern: [0, 2, 4, 2, 1, -1, 3, -1], lead: 'sine', leadVol: 0.3, sustain: 1.6, drums: 'light' },
+  desert: { bpm: 108, chords: [[164.8, 207.7, 246.9], [174.6, 220, 261.6], [164.8, 207.7, 246.9], [146.8, 174.6, 220]], pattern: [0, 1, 0, 2, 1, 0, 4, 2], lead: 'sawtooth', leadVol: 0.07, sustain: 0.7, drums: 'march' },
+  volcano: { bpm: 132, chords: [[164.8, 196, 246.9], [130.8, 164.8, 196], [146.8, 185, 220], [123.5, 155.6, 185]], pattern: [0, 0, 2, 0, 1, 0, 2, 3], lead: 'sawtooth', leadVol: 0.07, sustain: 0.6, drums: 'heavy', bass8: true },
+  night: { bpm: 84, chords: [[220, 261.6, 329.6], [174.6, 220, 261.6], [146.8, 174.6, 220], [164.8, 207.7, 246.9]], pattern: [0, -1, 2, -1, 4, -1, 1, -1], lead: 'triangle', leadVol: 0.25, sustain: 1.8, drums: 'none' },
+  boss: { bpm: 144, chords: [[146.8, 174.6, 220], [116.5, 146.8, 174.6], [130.8, 164.8, 196], [110, 138.6, 164.8]], pattern: [0, 2, 1, 2, 3, 2, 1, 2], lead: 'square', leadVol: 0.1, sustain: 0.6, drums: 'heavy', bass8: true },
+};
 
 export const sfx = new Sfx();

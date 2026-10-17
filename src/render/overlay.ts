@@ -14,6 +14,7 @@ export class Overlay {
   private readonly bossBadge: HTMLDivElement;
   private readonly bossFill: HTMLDivElement;
   private readonly bossText: HTMLDivElement;
+  private readonly bossName: HTMLDivElement;
   private readonly popups: Popup[] = [];
   private width = 1;
   private height = 1;
@@ -22,6 +23,8 @@ export class Overlay {
   constructor(private readonly root: HTMLElement) {
     this.armyBadge = this.el('badge badge-army');
     this.bossBadge = this.el('boss-badge');
+    this.bossName = document.createElement('div');
+    this.bossName.className = 'boss-name';
     this.bossText = document.createElement('div');
     this.bossText.className = 'boss-hp-text';
     const bar = document.createElement('div');
@@ -29,7 +32,7 @@ export class Overlay {
     this.bossFill = document.createElement('div');
     this.bossFill.className = 'boss-hp-fill';
     bar.appendChild(this.bossFill);
-    this.bossBadge.append(this.bossText, bar);
+    this.bossBadge.append(this.bossName, this.bossText, bar);
   }
 
   private el(cls: string) {
@@ -92,11 +95,14 @@ export class Overlay {
     this.place(e, camera, pos);
   }
 
-  setBoss(camera: THREE.Camera, pos: THREE.Vector3 | null, hp: number, maxHp: number) {
+  setBoss(camera: THREE.Camera, pos: THREE.Vector3 | null, hp: number, maxHp: number, name: string, sub: string, shielded: boolean) {
     if (!pos) {
       this.bossBadge.style.display = 'none';
       return;
     }
+    const title = sub ? `${name} · ${sub}` : name;
+    if (this.bossName.textContent !== title) this.bossName.textContent = title;
+    this.bossBadge.classList.toggle('shielded', shielded);
     const text = formatCount(Math.ceil(hp));
     if (this.bossText.textContent !== text) this.bossText.textContent = text;
     this.bossFill.style.transform = `scaleX(${Math.max(0, hp / maxHp).toFixed(3)})`;

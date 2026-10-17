@@ -96,6 +96,40 @@ export function waterTexture() {
   return tex;
 }
 
+export function lavaTexture() {
+  const { c, ctx } = canvas(256, 256);
+  const g = ctx.createLinearGradient(0, 0, 256, 256);
+  g.addColorStop(0, '#ff7a1a');
+  g.addColorStop(1, '#ff4a10');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 256);
+  const rnd = seededNoise(5);
+  // dark crust plates floating on the lava, with bright seams
+  for (let i = 0; i < 34; i++) {
+    const x = rnd() * 256;
+    const y = rnd() * 256;
+    const r = 10 + rnd() * 24;
+    ctx.fillStyle = 'rgba(60, 22, 12, 0.85)';
+    ctx.beginPath();
+    for (let k = 0; k < 7; k++) {
+      const a = (k / 7) * Math.PI * 2;
+      const rr = r * (0.7 + rnd() * 0.5);
+      const px = x + Math.cos(a) * rr;
+      const py = y + Math.sin(a) * rr * 0.7;
+      if (k === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(255, 230, 120, 0.55)';
+  for (let i = 0; i < 40; i++) ctx.fillRect(rnd() * 256, rnd() * 256, 3 + rnd() * 5, 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 export function groundTexture(base: string, speck: string) {
   const { c, ctx } = canvas(128, 128);
   ctx.fillStyle = base;

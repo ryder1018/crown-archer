@@ -1,4 +1,5 @@
 import { Preferences } from '@capacitor/preferences';
+import type { SkillKind } from '../sim/types';
 import type { UpgradeLevels } from './progression';
 
 export interface SaveData {
@@ -10,6 +11,10 @@ export interface SaveData {
   upgrades: UpgradeLevels;
   settings: { sound: boolean; music: boolean; haptics: boolean };
   stats: { wins: number; losses: number; bestArmy: number };
+  /** equipped active skill */
+  skill: SkillKind | null;
+  /** content the player has been introduced to, e.g. "boss:frost" */
+  seen: string[];
 }
 
 const KEY = 'crown-archers-save';
@@ -23,6 +28,8 @@ export function defaultSave(): SaveData {
     upgrades: { army: 0, rate: 0, damage: 0, income: 0 },
     settings: { sound: true, music: true, haptics: true },
     stats: { wins: 0, losses: 0, bestArmy: 0 },
+    skill: null,
+    seen: [],
   };
 }
 
@@ -41,6 +48,8 @@ export function parseSave(raw: string | null): SaveData {
       upgrades: { ...base.upgrades, ...data.upgrades },
       settings: { ...base.settings, ...data.settings },
       stats: { ...base.stats, ...data.stats },
+      skill: data.skill === 'storm' || data.skill === 'freeze' || data.skill === 'horn' ? data.skill : null,
+      seen: Array.isArray(data.seen) ? data.seen.filter((x): x is string => typeof x === 'string') : [],
     };
   } catch {
     return base;
