@@ -23,7 +23,7 @@ const UPGRADE_ICONS: Record<UpgradeKind, string> = {
   army: '<svg viewBox="0 0 24 24"><path d="M12 2l3 3-1 1v3h3l1-1 3 3-3 3-1-1h-3v6h-4v-6H7l-1 1-3-3 3-3 1 1h3V6l-1-1z"/></svg>',
   rate: '<svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>',
   damage: '<svg viewBox="0 0 24 24"><path d="M3 21l3-1 9-9-2-2-9 9zm11-13l2 2 5-5V3h-2z"/><path d="M5 13l6 6-1.5 1.5-6-6z"/></svg>',
-  income: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path fill="#fff6" d="M11 6h2v2h2v2h-4v1h3a2 2 0 012 2v1a2 2 0 01-2 2h-1v2h-2v-2H9v-2h4v-1h-3a2 2 0 01-2-2v-1a2 2 0 012-2h1z"/></svg>',
+  income: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="18" rx="8" ry="3"/><path d="M4 18v-3c0 1.7 3.6 3 8 3s8-1.3 8-3v3" opacity=".7"/><ellipse cx="12" cy="13" rx="8" ry="3"/><path d="M4 13v-3c0 1.7 3.6 3 8 3s8-1.3 8-3v3" opacity=".7"/><ellipse cx="12" cy="8" rx="8" ry="3"/><path d="M4 8V5c0 1.7 3.6 3 8 3s8-1.3 8-3v3" opacity=".7"/><ellipse cx="12" cy="5" rx="8" ry="3"/></svg>',
 };
 
 class Game {
@@ -109,6 +109,7 @@ class Game {
       if (steps === 6) this.acc = 0;
       this.updateHud();
     }
+    this.view.homeView = this.mode === 'home';
     this.view.render(this.world, this.mode === 'paused' ? 0 : dt);
     requestAnimationFrame((n) => this.frame(n));
   }
@@ -478,6 +479,14 @@ class Game {
     }
   }
 
+  /** Screenshot helper: stop the simulation but keep rendering. */
+  debugFreeze() {
+    if (this.mode === 'playing') this.mode = 'paused';
+    // autoplay skips rendering, so let the camera and popups catch up first
+    for (let i = 0; i < 90; i++) this.view.render(this.world, 1 / 60);
+    this.updateHud();
+  }
+
   debugStart() {
     this.start();
   }
@@ -509,6 +518,8 @@ declare const __APP_VERSION__: string;
 
 const game = new Game();
 void game.boot();
+// never leave the native splash up if startup fails for any reason
+if (Capacitor.isNativePlatform()) window.setTimeout(() => void SplashScreen.hide().catch(() => undefined), 5000);
 if (import.meta.env.DEV || new URLSearchParams(location.search).has('debug')) {
   (window as unknown as { game: Game }).game = game;
 }

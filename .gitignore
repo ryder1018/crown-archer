@@ -3,7 +3,8 @@ dist
 .DS_Store
 *.local
 test-results
-/shots
 ios/App/Pods
 ios/App/App/public
 ios/DerivedData
+/shots*
+/store/raw-*

@@ -75,6 +75,9 @@ export class GameView {
   private time = 0;
   private shake = 0;
   private ringAge = 99;
+  /** On the home screen the camera frames the army above the menu. */
+  homeView = false;
+  private homeBlend = 0;
   private camX = 0;
   private camZ = 0;
   private bossDeadAge = -1;
@@ -501,13 +504,14 @@ export class GameView {
     const k = 1 - Math.exp(-dt * 6);
     this.camX += (a.x * 0.35 - this.camX) * k;
     this.camZ += (-a.d - this.camZ) * k;
-    const height = bossFight ? 14 : 12.5;
-    const back = bossFight ? 8.5 : 6.5;
+    this.homeBlend += ((this.homeView ? 1 : 0) - this.homeBlend) * k;
+    const height = (bossFight ? 14 : 12.5) - this.homeBlend * 3;
+    const back = (bossFight ? 8.5 : 6.5) + this.homeBlend * 2;
     this.shake = Math.max(0, this.shake - dt * 2.2);
     const sx = (Math.random() - 0.5) * this.shake * 0.6;
     const sy = (Math.random() - 0.5) * this.shake * 0.6;
     this.camera.position.set(this.camX + sx, height + sy, this.camZ + back);
-    this.camera.lookAt(this.camX * 0.8, 0, this.camZ - (bossFight ? 13 : 12));
+    this.camera.lookAt(this.camX * 0.8, 0, this.camZ - (bossFight ? 13 : 12) + this.homeBlend * 7);
   }
 
   private syncOverlay(world: World, dt: number) {

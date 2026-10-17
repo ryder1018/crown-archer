@@ -33,6 +33,8 @@ async function capture(name, levels, up, cond) {
       return window.game.world.state === 'playing';
     }, cond.toString());
     if (ok) {
+      // let a few frames render (particles, popups), then freeze the moment
+      await page.evaluate(() => window.game.debugFreeze());
       await shot(name);
       return;
     }
@@ -44,11 +46,13 @@ await capture('1-gates', [8, 10, 11, 12, 14, 6], 5, (w) =>
   w.army.count > 20 && w.gates.some((x) => !x.passed && x.d - w.army.d < 12 && x.d - w.army.d > 8));
 await capture('2-battle', [9, 10, 12, 15, 17], 3, (w) =>
   w.squads.some((s) => s.engaged && s.count > 8) || w.squads.some((s) => !s.gone && s.d - w.army.d < 9 && s.count > 12));
-await capture('3-boss', [13, 14, 15], 4, (w) =>
-  w.boss.state === 'attack' || (w.boss.state === 'walk' && w.boss.d - w.army.d < 22));
+await capture('3-boss', [10, 11, 12, 13], 6, (w) =>
+  w.boss.state === 'attack' || (w.boss.state === 'walk' && w.boss.d - w.army.d < 24));
 
 // 4. victory
-await page.evaluate(() => window.game.debugAutoplayUntil(() => false, 60));
+await setup(10, 8);
+await page.evaluate(() => window.game.debugStart());
+await page.evaluate(() => window.game.debugAutoplayUntil(() => false, 120));
 await page.waitForTimeout(1600);
 await shot('4-victory');
 
