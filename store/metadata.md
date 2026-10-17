@@ -14,8 +14,8 @@
 | 年齡分級 Age Rating | 問卷中「卡通或奇幻暴力」選「不常/輕微 Infrequent/Mild」，其餘全部「無 None」→ 結果應為 9+ |
 | 價格 Price | 免費 Free |
 | App 內購買 | 無 |
-| 隱私權政策網址 | `https://<你的 GitHub 帳號>.github.io/crown-archers/privacy.html`（見 README） |
-| 支援網址 Support URL | `https://<你的 GitHub 帳號>.github.io/crown-archers/` |
+| 隱私權政策網址 | `https://crown-archers.beloved-sucai.workers.dev/privacy` |
+| 支援網址 Support URL | `https://crown-archers.beloved-sucai.workers.dev/` |
 
 ### App 隱私 App Privacy（「資料類型」問卷）
 選「**否，我們不會從此 App 收集資料**」→ 標籤會顯示「未收集資料 Data Not Collected」。

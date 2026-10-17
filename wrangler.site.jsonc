@@ -1,0 +1,7 @@
+// Static hosting for the privacy policy & support pages in docs/ (Cloudflare Workers static assets).
+// deploy: npx wrangler deploy -c wrangler.site.jsonc
+{
+  "name": "crown-archers",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "./docs" }
+}

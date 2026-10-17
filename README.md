@@ -38,7 +38,7 @@ src/meta/      升級公式、金幣獎勵、存檔（@capacitor/preferences）
 src/render/    three.js 畫面：模型、場景、粒子、追蹤 3D 位置的文字
 src/main.ts    遊戲流程、UI、輸入、音效、震動
 ios/           Capacitor iOS 專案
-docs/          隱私權政策與客服頁（放到 GitHub Pages）
+docs/          隱私權政策與客服頁（部署到 Cloudflare，見 wrangler.site.jsonc）
 store/         App Store 截圖與上架文案
 ```
 
@@ -47,13 +47,15 @@ store/         App Store 截圖與上架文案
 ### 1. 註冊 Apple Developer Program
 到 <https://developer.apple.com/programs/enroll/> 用你的 Apple ID 註冊（個人 US$99／年）。審核通常 1–2 天。
 
-### 2. 放上隱私權政策與客服網頁
-App Store 規定一定要有隱私權政策網址。
-1. 把 `docs/index.html` 與 `docs/privacy.html` 裡的 `SUPPORT_EMAIL` 換成你要公開的客服信箱。
-2. 在 GitHub 建一個 **public** repo（例如 `crown-archers`），把整個專案（或只放 `docs/`）推上去。
-3. repo → Settings → Pages → Source 選 `main` 分支、資料夾 `/docs` → Save。
-4. 幾分鐘後網址會是 `https://<你的帳號>.github.io/crown-archers/privacy.html`。
-5. 如果網址跟 `index.html` 裡設定頁的連結不同，改 `index.html` 中 `#lbl-privacy` 的 `href`。
+### 2. 隱私權政策與客服網頁（已完成）
+已部署到 Cloudflare（你的帳號，靜態網頁）：
+- 客服：https://crown-archers.beloved-sucai.workers.dev/
+- 隱私權政策：https://crown-archers.beloved-sucai.workers.dev/privacy
+
+內容在 `docs/`，修改後重新部署：
+```bash
+npx wrangler deploy -c wrangler.site.jsonc
+```
 
 ### 3. 在 Mac 上建置
 ```bash
