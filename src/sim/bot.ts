@@ -5,6 +5,25 @@ import type { World } from './world';
 /** Simple autopilot used by balance tests and the attract-mode demo. */
 export function botSteer(w: World) {
   const a = w.army;
+  // fire the skill once it is charged and there is something worth hitting
+  if (w.skillCharge >= 1 && (w.boss.state === 'walk' || w.boss.state === 'attack' || w.squads.some((s) => !s.gone && s.aggro && s.count > a.count * 0.5))) {
+    w.useSkill();
+  }
+  // step out of the landing zone of incoming boss projectiles
+  if (w.shots.length) {
+    let bestX = a.x;
+    let bestScore = -Infinity;
+    for (let x = -ROAD_HALF_WIDTH + 0.5; x <= ROAD_HALF_WIDTH - 0.5; x += 0.5) {
+      const clearance = Math.min(...w.shots.map((s) => Math.abs(x - s.x) - s.r));
+      const score = Math.min(clearance, w.armyRadius + 0.5) - Math.abs(x - a.x) * 0.05;
+      if (score > bestScore) {
+        bestScore = score;
+        bestX = x;
+      }
+    }
+    w.setTargetX(bestX);
+    return;
+  }
   const ahead = (d: number) => d > a.d - 0.5 && d < a.d + 44;
 
   const row = w.gates.filter((g) => !g.passed && ahead(g.d)).sort((p, q) => p.d - q.d);

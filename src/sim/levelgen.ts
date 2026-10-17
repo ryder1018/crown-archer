@@ -1,12 +1,9 @@
 import { referenceStats } from '../meta/progression';
+import { BOSSES, bossAbilities, bossFor, isBonusLevel, REWARD_FROM, themeFor, UNITS } from './content';
 import { irange, mulberry32, pick, range, type Rng } from './rng';
-import { ROAD_HALF_WIDTH, type EntitySpec, type GateSpec, type LevelSpec, type Reward, type Theme } from './types';
+import { ROAD_HALF_WIDTH, type EntitySpec, type GateSpec, type LevelSpec, type Reward, type UnitKind } from './types';
 
-const THEMES: Theme[] = ['river', 'meadow', 'snow', 'desert'];
-
-export function themeFor(level: number): Theme {
-  return THEMES[Math.floor((level - 1) / 5) % THEMES.length];
-}
+export { themeFor } from './content';
 
 type Mod = Pick<GateSpec, 'op' | 'value'>;
 
@@ -38,8 +35,9 @@ function badMod(rng: Rng, e: number, level: number): Mod {
  * reasonably played run is expected to have, and sizes every encounter relative to it.
  */
 export function generateLevel(level: number, failStreak = 0): LevelSpec {
+  if (isBonusLevel(level)) return generateBonusLevel(level);
   // each failed attempt on the same level softens it a little, so nobody gets stuck for good
-  const ease = 1 - 0.1 * Math.min(5, failStreak);
+  const ease = 1 - 0.12 * Math.min(5, failStreak);
   const rng = mulberry32(level * 9973 + 17);
   const ref = referenceStats(level);
   const perSoldierDps = ref.fireRate * ref.damage;
@@ -78,11 +76,12 @@ export function generateLevel(level: number, failStreak = 0): LevelSpec {
       d += irange(rng, 26, 32);
     } else if (type === 'squad') {
       // the army shoots ~2.6s worth of volleys while a squad charges in; size squads so part of it arrives
-      const shotDown = e * perSoldierDps * 2.6;
+      const unit = pickUnit(rng, level);
+      const shotDown = e * perSoldierDps * 2.6 * UNIT_EXPOSURE[unit];
       const size = level <= 2 ? range(rng, 0.3, 0.5) : range(rng, 0.55, 0.95);
       const count = Math.max(3, Math.round((shotDown * size + e * range(rng, 0.1, 0.3)) * ease));
       const x = range(rng, -2.2, 2.2);
-      entities.push({ kind: 'squad', d: d + 6, x, count, charge: level > 3 && rng() < 0.5 });
+      entities.push({ kind: 'squad', d: d + 6, x, count, charge: unit === 'cavalry' || (level > 3 && rng() < 0.5), unit });
       e = Math.max(ref.startArmy, e - Math.max(0, count - shotDown) * 0.9);
       d += irange(rng, 30, 36);
     } else if (type === 'hazard') {
@@ -106,12 +105,19 @@ export function generateLevel(level: number, failStreak = 0): LevelSpec {
       e += n * per * 0.75;
       d += n * 2.2 + irange(rng, 16, 22);
     } else {
-      const reward: Reward = pick(rng, [
+      const pool: Reward[] = [
         { type: 'rapid', amount: 8 },
         { type: 'multi', amount: 1 },
         { type: 'soldiers', amount: Math.round(e * 0.5 + 5) },
         { type: 'coins', amount: 20 + level * 5 },
-      ] as Reward[]);
+        { type: 'fire', amount: 8 },
+        { type: 'freeze', amount: 4 },
+        { type: 'bomb', amount: 1 },
+      ];
+      const available = pool.filter((r) => level >= REWARD_FROM[r.type]);
+      // newly unlocked items show up more often in their debut region
+      const fresh = available.filter((r) => REWARD_FROM[r.type] > 1 && level - REWARD_FROM[r.type] < 5);
+      const reward: Reward = fresh.length && rng() < 0.5 ? pick(rng, fresh) : pick(rng, available);
       const hp = Math.round(perSoldierDps * e * range(rng, 1.6, 2.6));
       entities.push({ kind: 'barrel', d, x: range(rng, -2.8, 2.8), hp, small: false, reward });
       if (reward.type === 'soldiers') e += reward.amount * 0.8;
@@ -120,14 +126,75 @@ export function generateLevel(level: number, failStreak = 0): LevelSpec {
   }
 
   const bossD = d + 36;
-  const bossTime = (level <= 2 ? 3.5 : 7 + Math.min(9, level * 0.35)) * ease;
+  const kind = bossFor(level);
+  const bossTime = (level <= 2 ? 3.5 : 7 + Math.min(9, level * 0.35)) * ease * BOSSES[kind].hpMul;
   entities.push({
     kind: 'boss',
+    boss: kind,
+    abilities: bossAbilities(level, kind),
     d: bossD,
     hp: Math.round(e * perSoldierDps * bossTime),
     damage: Math.ceil(e * (0.12 + Math.min(0.1, level * 0.004))) + 2,
     speed: 2.2 + Math.min(1.2, level * 0.03),
   });
 
-  return { level, theme: themeFor(level), entities, bossD };
+  return { level, theme: themeFor(level), entities, bossD, bonus: false };
 }
+
+/** How much of a squad the army can shoot down before contact, relative to plain infantry. */
+const UNIT_EXPOSURE: Record<UnitKind, number> = { infantry: 1, cavalry: 0.65, archer: 1.1, armored: 0.5, skeleton: 1 };
+
+function pickUnit(rng: Rng, level: number): UnitKind {
+  const kinds = (['cavalry', 'archer', 'armored'] as const).filter((k) => level >= UNITS[k].from);
+  if (!kinds.length || rng() < 0.45) return 'infantry';
+  // the newest unit type appears more often in the region that introduces it
+  const newest = kinds[kinds.length - 1];
+  if (level - UNITS[newest].from < 5 && rng() < 0.6) return newest;
+  return pick(rng, kinds);
+}
+
+/** Treasure run: generous gates, crates and coin barrels, then a chest to crack within a time limit. */
+function generateBonusLevel(level: number): LevelSpec {
+  const rng = mulberry32(level * 7919 + 3);
+  const ref = referenceStats(level);
+  const perSoldierDps = ref.fireRate * ref.damage;
+  const entities: EntitySpec[] = [];
+  let e = ref.startArmy;
+  let d = 26;
+  for (let i = 0; i < 7; i++) {
+    if (i % 2 === 0) {
+      const a = goodMod(rng, e, level);
+      const b: Mod = { op: 'add', value: Math.round(e * range(rng, 0.2, 0.4)) + 3 };
+      const left = rng() < 0.5;
+      entities.push({
+        kind: 'gates', d, gates: [
+          { x0: left ? -ROAD_HALF_WIDTH : 0, x1: left ? 0 : ROAD_HALF_WIDTH, op: a.op, value: a.value, step: 1e9 },
+          { x0: left ? 0 : -ROAD_HALF_WIDTH, x1: left ? ROAD_HALF_WIDTH : 0, op: b.op, value: b.value, step: 1e9 },
+        ],
+      });
+      e = applyMod(e, a.op, a.value) * 0.9;
+      d += 24;
+    } else {
+      const side = rng() < 0.5 ? -1 : 1;
+      for (let k = 0; k < 6; k++) {
+        const coin = k % 2 === 0;
+        entities.push({
+          kind: 'barrel', d: d + k * 2.6, x: coin ? -side * 2.6 : side * 3.4,
+          hp: Math.max(1, Math.round(perSoldierDps * e * (coin ? 0.5 : 0.2))), small: !coin,
+          reward: coin ? { type: 'coins', amount: 10 + level * 2 } : { type: 'soldiers', amount: Math.max(2, Math.round(e * 0.05)) },
+        });
+      }
+      e *= 1.15;
+      d += 6 * 2.6 + 16;
+    }
+  }
+  const bossD = d + 36;
+  entities.push({
+    kind: 'boss', boss: 'chest', abilities: [], d: bossD,
+    hp: Math.round(e * perSoldierDps * 8), damage: 0, speed: 0,
+  });
+  return { level, theme: themeFor(level), entities, bossD, bonus: true };
+}
+
+/** Coins inside a treasure chest. */
+export const chestCoins = (level: number) => 60 + level * 18;

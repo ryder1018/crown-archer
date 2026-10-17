@@ -2,6 +2,7 @@ import { it } from 'vitest';
 import { levelReward, referenceStats, statsFor, upgradeCost, UPGRADE_KINDS, type UpgradeLevels } from '../meta/progression';
 import { applyMod, generateLevel } from './levelgen';
 import { mulberry32 } from './rng';
+import { unlockedSkills } from './content';
 import { botSteer } from './bot';
 import { World } from './world';
 import type { Stats } from './types';
@@ -26,7 +27,8 @@ function sloppySteer(w: World, rng: () => number, mem: Map<number, number>) {
 }
 
 function run(level: number, stats: Stats, sloppy: boolean, seed: number, failStreak = 0) {
-  const w = new World(generateLevel(level, failStreak), stats, seed);
+  // players have the arrow storm from level 3 on
+  const w = new World(generateLevel(level, failStreak), stats, seed, unlockedSkills(level)[0] ?? null);
   const rng = mulberry32(seed * 31);
   const mem = new Map<number, number>();
   for (let i = 0; i < 60 * 240 && w.state === 'playing'; i++) {
@@ -40,7 +42,7 @@ function run(level: number, stats: Stats, sloppy: boolean, seed: number, failStr
 it('balance report', () => {
   const none = statsFor({ army: 0, rate: 0, damage: 0, income: 0 });
   const lines = ['lvl  ref  sloppyRef  noUpg  sloppyNoUpg   (win rate over 5 seeds; avg secs)'];
-  for (const lv of [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 18, 22, 26, 30, 40, 50]) {
+  for (const lv of [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 18, 22, 24, 26, 28, 30, 35, 40, 45, 50]) {
     const ref = referenceStats(lv);
     const cell = (stats: Stats, sloppy: boolean) => {
       let wins = 0;
@@ -62,7 +64,7 @@ it('campaign pacing with a sloppy player who buys the cheapest upgrade', () => {
   let coins = 0;
   const attempts: number[] = [];
   let seed = 1;
-  for (let lv = 1; lv <= 40; lv++) {
+  for (let lv = 1; lv <= 50; lv++) {
     let tries = 0;
     for (;;) {
       tries++;

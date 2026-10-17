@@ -33,13 +33,13 @@ describe('levelgen', () => {
 describe('world', () => {
   it('passing a gate applies the gate under the army', () => {
     const level: LevelSpec = {
-      level: 1, theme: 'river', bossD: 200,
+      level: 1, theme: 'river', bossD: 200, bonus: false,
       entities: [
         { kind: 'gates', d: 10, gates: [
           { x0: -5, x1: 0, op: 'add', value: 7, step: 1000 },
           { x0: 0, x1: 5, op: 'mul', value: 2, step: 1000 },
         ] },
-        { kind: 'boss', d: 200, hp: 10, damage: 1, speed: 0 },
+        { kind: 'boss', d: 200, hp: 10, damage: 1, speed: 0, boss: 'giant', abilities: ['smash'] },
       ],
     };
     const w = new World(level, statsFor({ army: 0, rate: 0, damage: 0, income: 0 }));
@@ -50,13 +50,13 @@ describe('world', () => {
 
   it('shooting an add gate raises its value', () => {
     const level: LevelSpec = {
-      level: 1, theme: 'river', bossD: 300,
+      level: 1, theme: 'river', bossD: 300, bonus: false,
       entities: [
         { kind: 'gates', d: 40, gates: [
           { x0: -5, x1: 0, op: 'add', value: -10, step: 1 },
           { x0: 0, x1: 5, op: 'add', value: -10, step: 1 },
         ] },
-        { kind: 'boss', d: 300, hp: 10, damage: 1, speed: 0 },
+        { kind: 'boss', d: 300, hp: 10, damage: 1, speed: 0, boss: 'giant', abilities: ['smash'] },
       ],
     };
     const w = new World(level, statsFor({ army: 5, rate: 0, damage: 0, income: 0 }));
@@ -68,8 +68,8 @@ describe('world', () => {
 
   it('the boss dies exactly once even when many arrows land together', () => {
     const level: LevelSpec = {
-      level: 1, theme: 'river', bossD: 40,
-      entities: [{ kind: 'boss', d: 40, hp: 1, damage: 1, speed: 0 }],
+      level: 1, theme: 'river', bossD: 40, bonus: false,
+      entities: [{ kind: 'boss', d: 40, hp: 1, damage: 1, speed: 0, boss: 'giant', abilities: ['smash'] }],
     };
     const w = new World(level, statsFor({ army: 40, rate: 10, damage: 0, income: 0 }));
     let deaths = 0;
@@ -85,11 +85,11 @@ describe('world', () => {
 
   it('spike traps hit only the soldiers that overlap them', () => {
     const level: LevelSpec = {
-      level: 1, theme: 'river', bossD: 200,
+      level: 1, theme: 'river', bossD: 200, bonus: false,
       entities: [
         { kind: 'hazard', d: 10, x0: -5, x1: 0, lethality: 1 },
         { kind: 'hazard', d: 20, x0: 0, x1: 5, lethality: 1 },
-        { kind: 'boss', d: 200, hp: 10, damage: 1, speed: 0 },
+        { kind: 'boss', d: 200, hp: 10, damage: 1, speed: 0, boss: 'giant', abilities: ['smash'] },
       ],
     };
     const w = new World(level, statsFor({ army: 20, rate: 0, damage: 0, income: 0 }));
