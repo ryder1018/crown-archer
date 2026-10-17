@@ -124,6 +124,16 @@ export class GameView {
     this.scene.add(this.armyShadow, this.armyMesh, this.enemyMesh, this.arrowMesh, this.particles.mesh, this.king, this.ring, this.levelGroup);
   }
 
+  /** Lowers the render resolution one step; returns false when already at the floor. */
+  reduceQuality() {
+    const current = this.renderer.getPixelRatio();
+    if (current <= 1) return false;
+    this.renderer.setPixelRatio(Math.max(1, current - 0.35));
+    const size = this.renderer.getSize(new THREE.Vector2());
+    this.renderer.setSize(size.x, size.y, false);
+    return true;
+  }
+
   resize(w: number, h: number) {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;

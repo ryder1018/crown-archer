@@ -40,6 +40,8 @@ class Game {
   private gateTipShown = false;
   private hintShown = false;
   private readonly isNative = Capacitor.isNativePlatform();
+  private perfFrames = 0;
+  private perfTime = 0;
 
   constructor() {
     this.view = new GameView($('#scene'), $('#overlay'));
@@ -108,10 +110,23 @@ class Game {
       }
       if (steps === 6) this.acc = 0;
       this.updateHud();
+      this.watchPerformance(dt);
     }
     this.view.homeView = this.mode === 'home';
     this.view.render(this.world, this.mode === 'paused' ? 0 : dt);
     requestAnimationFrame((n) => this.frame(n));
+  }
+
+  /** Drops resolution on devices that cannot hold ~45fps during play. */
+  private watchPerformance(dt: number) {
+    if (document.hidden) return;
+    this.perfFrames++;
+    this.perfTime += dt;
+    if (this.perfFrames < 120) return;
+    const avg = this.perfTime / this.perfFrames;
+    this.perfFrames = 0;
+    this.perfTime = 0;
+    if (avg > 1 / 45) this.view.reduceQuality();
   }
 
   private onEvents() {
