@@ -769,9 +769,16 @@ class Game {
 declare const __APP_VERSION__: string;
 
 const game = new Game();
-void game.boot();
+const params = new URLSearchParams(location.search);
+const debug = import.meta.env.DEV || params.has('debug');
+void game.boot().then(() => {
+  // testing shortcuts: ?debug&level=24 jumps to a level, &up=14 sets every upgrade to that level
+  if (!debug) return;
+  const level = Number(params.get('level'));
+  if (Number.isInteger(level) && level >= 1) game.debugSetLevel(level);
+  const up = Number(params.get('up'));
+  if (params.has('up') && Number.isInteger(up) && up >= 0) game.debugSetSave({ upgrades: { army: up, rate: up, damage: up, income: up } });
+});
 // never leave the native splash up if startup fails for any reason
 if (Capacitor.isNativePlatform()) window.setTimeout(() => void SplashScreen.hide().catch(() => undefined), 5000);
-if (import.meta.env.DEV || new URLSearchParams(location.search).has('debug')) {
-  (window as unknown as { game: Game }).game = game;
-}
+if (debug) (window as unknown as { game: Game }).game = game;
