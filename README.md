@@ -25,6 +25,7 @@ npm run build        # 產出 dist/
 | `node scripts/shots.mjs http://localhost:5173/ shots 5` | 第 5 關一路自動玩並截圖到 `shots/` |
 | `node scripts/input-test.mjs` | 驗證拖曳、暫停、繼續 |
 | `node scripts/icon.mjs` | 重新算圖 App 圖示到 `resources/icon.png` |
+| `python scripts/subset-font.py` | 新增中文字後重新產生字型子集 `public/fonts/ca-round.woff2`（需要 fonttools、brotli） |
 | `node scripts/store-shots.mjs … zh-TW` + `python scripts/compose-store.py zh-TW` | 產生 App Store 截圖（見 `store/metadata.md`） |
 
 ### 程式結構

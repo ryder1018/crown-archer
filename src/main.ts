@@ -52,7 +52,7 @@ class Game {
     sfx.soundOn = this.save.settings.sound;
     sfx.musicOn = this.save.settings.music;
     try {
-      await document.fonts.load('64px "Lilita One"');
+      await Promise.all([document.fonts.load('64px "Lilita One"'), document.fonts.load('64px "CA Round"', '王冠')]);
     } catch {
       /* fallback fonts are fine */
     }

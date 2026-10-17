@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export const NUMBER_FONT = '"Lilita One", "Arial Black", sans-serif';
+export const NUMBER_FONT = '"Lilita One", "CA Round", "PingFang TC", sans-serif';
 
 function canvas(w: number, h: number) {
   const c = document.createElement('canvas');

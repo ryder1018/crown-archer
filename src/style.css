@@ -4,6 +4,13 @@
   font-display: block;
 }
 
+/* jf open huninn subset (SIL OFL 1.1), renamed per the OFL reserved-name rule; see scripts/subset-font.py */
+@font-face {
+  font-family: 'CA Round';
+  src: url('/fonts/ca-round.woff2') format('woff2');
+  font-display: block;
+}
+
 :root {
   --ink: #1b2a4a;
   --blue: #2f7bff;
@@ -12,8 +19,8 @@
   --gold: #ffc93c;
   --gold-dark: #c98700;
   --cream: #fff7e6;
-  --font-display: 'Lilita One', 'PingFang TC', 'Noto Sans TC', 'Heiti TC', sans-serif;
-  --font-ui: 'PingFang TC', 'Noto Sans TC', -apple-system, 'Helvetica Neue', sans-serif;
+  --font-display: 'Lilita One', 'CA Round', 'PingFang TC', 'Noto Sans TC', sans-serif;
+  --font-ui: 'CA Round', 'PingFang TC', 'Noto Sans TC', -apple-system, 'Helvetica Neue', sans-serif;
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
 }
@@ -34,7 +41,10 @@ body {
   background: #8fd6ff;
   color: #fff;
   font-family: var(--font-ui);
+  font-synthesis: none;
   overscroll-behavior: none;
+  /* the rounded CJK font has a single, fairly light weight: thicken it with a same-colour stroke */
+  -webkit-text-stroke: 0.5px currentColor;
 }
 
 body.framed {
@@ -145,8 +155,16 @@ button {
   font: 40px/1 var(--font-display);
   white-space: nowrap;
   will-change: transform, opacity;
-  -webkit-text-stroke: 2px #0a2050;
-  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+  text-shadow:
+    2.5px 0 0 #0a2050,
+    -2.5px 0 0 #0a2050,
+    0 2.5px 0 #0a2050,
+    0 -2.5px 0 #0a2050,
+    1.88px 1.88px 0 #0a2050,
+    -1.88px 1.88px 0 #0a2050,
+    1.88px -1.88px 0 #0a2050,
+    -1.88px -1.88px 0 #0a2050,
+    0 4px 0 #0a2050;
 }
 
 .pop-good {
@@ -155,12 +173,30 @@ button {
 
 .pop-bad {
   color: #ff5b5b;
-  -webkit-text-stroke: 2px #4a0000;
+  text-shadow:
+    2.5px 0 0 #4a0000,
+    -2.5px 0 0 #4a0000,
+    0 2.5px 0 #4a0000,
+    0 -2.5px 0 #4a0000,
+    1.88px 1.88px 0 #4a0000,
+    -1.88px 1.88px 0 #4a0000,
+    1.88px -1.88px 0 #4a0000,
+    -1.88px -1.88px 0 #4a0000,
+    0 4px 0 #4a0000;
 }
 
 .pop-coin {
   color: var(--gold);
-  -webkit-text-stroke: 2px #6b3b00;
+  text-shadow:
+    2.5px 0 0 #6b3b00,
+    -2.5px 0 0 #6b3b00,
+    0 2.5px 0 #6b3b00,
+    0 -2.5px 0 #6b3b00,
+    1.88px 1.88px 0 #6b3b00,
+    -1.88px 1.88px 0 #6b3b00,
+    1.88px -1.88px 0 #6b3b00,
+    -1.88px -1.88px 0 #6b3b00,
+    0 4px 0 #6b3b00;
 }
 
 /* ---------- shared widgets ---------- */
@@ -300,13 +336,21 @@ body[data-mode='result'] .hud {
 
 .logo h1 {
   margin: 2px 0 0;
-  font: 50px/1.05 var(--font-display);
-  font-weight: 900;
-  letter-spacing: 2px;
+  font: 52px/1.1 var(--font-display);
+  letter-spacing: 3px;
+  -webkit-text-stroke: 1.4px #fff;
   color: #fff;
-  -webkit-text-stroke: 3px var(--ink);
-  paint-order: stroke fill;
-  text-shadow: 0 5px 0 var(--ink), 0 8px 12px rgba(0, 0, 0, 0.35);
+  text-shadow:
+    3px 0 0 var(--ink),
+    -3px 0 0 var(--ink),
+    0 3px 0 var(--ink),
+    0 -3px 0 var(--ink),
+    2.25px 2.25px 0 var(--ink),
+    -2.25px 2.25px 0 var(--ink),
+    2.25px -2.25px 0 var(--ink),
+    -2.25px -2.25px 0 var(--ink),
+    0 7px 0 var(--ink),
+    0 10px 14px rgba(0, 0, 0, 0.35);
 }
 
 .logo p {
@@ -340,13 +384,22 @@ body[data-mode='result'] .hud {
   min-width: 220px;
   padding: 18px 34px 20px;
   border-radius: 24px;
-  font: 34px/1 var(--font-display);
-  font-weight: 900;
+  font: 36px/1 var(--font-display);
+  letter-spacing: 4px;
+  -webkit-text-stroke: 1.4px #fff;
   color: #fff;
   background: linear-gradient(#5be06b, #22a83a);
   box-shadow: 0 7px 0 #137024, 0 12px 24px rgba(0, 0, 0, 0.3);
-  -webkit-text-stroke: 1.5px #0b4a17;
-  text-shadow: 0 3px 0 #0b4a17;
+  text-shadow:
+    2.5px 0 0 #0b5a1c,
+    -2.5px 0 0 #0b5a1c,
+    0 2.5px 0 #0b5a1c,
+    0 -2.5px 0 #0b5a1c,
+    1.88px 1.88px 0 #0b5a1c,
+    -1.88px 1.88px 0 #0b5a1c,
+    1.88px -1.88px 0 #0b5a1c,
+    -1.88px -1.88px 0 #0b5a1c,
+    0 4px 0 #0b5a1c;
   animation: pulse 1.4s ease-in-out infinite;
 }
 
@@ -602,7 +655,6 @@ body[data-mode='result'] .hud {
   padding: 14px 0 16px;
   text-align: center;
   font: 34px/1 var(--font-display);
-  font-weight: 900;
   background: linear-gradient(90deg, transparent, rgba(160, 20, 30, 0.85) 20%, rgba(160, 20, 30, 0.85) 80%, transparent);
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
   pointer-events: none;
@@ -661,11 +713,19 @@ body[data-mode='result'] .hud {
 
 .card h2 {
   margin: 0 0 8px;
-  font: 40px/1.1 var(--font-display);
-  font-weight: 900;
-  -webkit-text-stroke: 2px var(--ink);
-  paint-order: stroke fill;
-  text-shadow: 0 4px 0 var(--ink);
+  font: 42px/1.15 var(--font-display);
+  letter-spacing: 2px;
+  -webkit-text-stroke: 1.4px #fff;
+  text-shadow:
+    2.5px 0 0 var(--ink),
+    -2.5px 0 0 var(--ink),
+    0 2.5px 0 var(--ink),
+    0 -2.5px 0 var(--ink),
+    1.88px 1.88px 0 var(--ink),
+    -1.88px 1.88px 0 var(--ink),
+    1.88px -1.88px 0 var(--ink),
+    -1.88px -1.88px 0 var(--ink),
+    0 5px 0 var(--ink);
 }
 
 .result-card {
