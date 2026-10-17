@@ -14,9 +14,12 @@
 ```bash
 npm ci
 npm run dev          # http://localhost:5173 ，加上 ?debug 可在 console 使用 window.game
-npm test             # 遊戲邏輯、存檔、平衡（自動駕駛 bot 跑 40 關）
+npm test             # 遊戲邏輯、存檔、收藏庫、平衡（自動駕駛 bot 跑 55 關）
 npm run build        # 產出 dist/
 ```
+
+測試捷徑（只有網址帶 `?debug` 才有效，會覆蓋瀏覽器裡的進度）：
+`?debug&level=33&up=18&coins=5000` → 跳到第 33 關、四項升級設為 Lv.18、金幣 5000。
 
 開發用腳本（需先 `npm run dev`）：
 

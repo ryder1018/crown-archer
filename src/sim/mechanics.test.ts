@@ -4,7 +4,7 @@ import { generateLevel } from './levelgen';
 import { bossAbilities, bossFor, isBonusLevel, themeFor, unlockedSkills } from './content';
 import { botSteer } from './bot';
 import { circleOverlap, World } from './world';
-import type { BossAbility, BossKind, EntitySpec, LevelSpec, UnitKind } from './types';
+import { NO_PERKS, type BossAbility, type BossKind, type EntitySpec, type LevelSpec, type UnitKind } from './types';
 
 const stats = (lv = 0) => statsFor({ army: lv, rate: lv, damage: lv, income: 0 });
 
@@ -29,10 +29,13 @@ describe('content', () => {
     expect(themeFor(1)).toBe('river');
     expect(themeFor(21)).toBe('volcano');
     expect(themeFor(30)).toBe('night');
-    expect(themeFor(31)).toBe('river');
+    expect(themeFor(31)).toBe('jungle');
+    expect(themeFor(45)).toBe('sky');
+    expect(themeFor(46)).toBe('river');
+    expect(bossFor(38)).toBe('witch');
     expect(bossFor(12)).toBe('frost');
     expect(bossAbilities(3, 'giant')).toEqual(['smash']);
-    expect(bossAbilities(33, 'giant')).toContain('enrage');
+    expect(bossAbilities(48, 'giant')).toContain('enrage');
     expect(isBonusLevel(7)).toBe(true);
     expect(isBonusLevel(8)).toBe(false);
     expect(unlockedSkills(2)).toEqual([]);
@@ -161,5 +164,79 @@ describe('mechanics', () => {
     });
     expect(w.state).toBe('won');
     expect(chest).toBeGreaterThan(0);
+  });
+
+  it('the ape leaps into melee and crushes an army that stays put', () => {
+    const run = (dodge: boolean) => {
+      const w = new World(level([], 70, 'ape', ['leap']), stats(10));
+      const start = w.army.count;
+      let landed = false;
+      step(w, 8, () => {
+        if (dodge && w.shots.length) w.setTargetX(w.shots[0].x > 0 ? -4.5 : 4.5);
+        landed ||= w.events.some((e) => e.type === 'shotLand' && e.shot.kind === 'leap');
+      });
+      return { w, landed, lost: start - w.army.count };
+    };
+    const still = run(false);
+    expect(still.landed).toBe(true);
+    expect(still.w.boss.state).toBe('attack');
+    expect(run(true).lost).toBeLessThan(still.lost);
+  });
+
+  it('poison pools drain only the soldiers standing in them', () => {
+    const run = (dodge: boolean) => {
+      const w = new World(level([], 60, 'witch', ['poison']), stats(10));
+      let pools = 0;
+      step(w, 9, () => {
+        const threats = [...w.shots, ...w.pools];
+        if (dodge && threats.length) w.setTargetX(threats[0].x > 0 ? -4.5 : 4.5);
+        pools = Math.max(pools, w.pools.length);
+      });
+      return { pools, count: w.army.count };
+    };
+    const still = run(false);
+    expect(still.pools).toBeGreaterThan(0);
+    expect(run(true).count).toBeGreaterThan(still.count);
+  });
+
+  it('lightning strikes in threes and leaves a gap', () => {
+    const w = new World(level([], 50, 'titan', ['lightning']), stats(10));
+    let bolts = 0;
+    step(w, 5, () => {
+      bolts = Math.max(bolts, w.shots.filter((s) => s.kind === 'bolt').length);
+    });
+    expect(bolts).toBeGreaterThanOrEqual(2);
+  });
+
+  it('arrows fly through mystery gates and the gate is applied on entry', () => {
+    const gates: EntitySpec = {
+      kind: 'gates', d: 30, gates: [
+        { x0: -5, x1: 0, op: 'mul', value: 2, step: 1e9, mystery: true },
+        { x0: 0, x1: 5, op: 'add', value: 3, step: 1, mystery: false },
+      ],
+    };
+    const w = new World(level([gates]), stats(5));
+    w.setTargetX(-2.5);
+    const start = w.army.count;
+    step(w, 1.5);
+    expect(w.gates[0].hitTime).toBe(-1);
+    step(w, 3);
+    expect(w.army.count).toBe(start * 2);
+  });
+
+  it('hero perks cut losses and raise fallen enemies', () => {
+    const fight = (meleeTaken: number, raise: number) => {
+      // arrows that barely scratch, so the squad reaches the army and it comes down to melee
+      const weak = { startArmy: 200, fireRate: 1.5, damage: 0.01, income: 1 };
+      const w = new World(level([squad(20, 120)]), weak, 1, null, { ...NO_PERKS, meleeTaken, raise });
+      let raised = 0;
+      step(w, 8, () => {
+        for (const e of w.events) if (e.type === 'raise') raised += e.n;
+      });
+      return { count: w.army.count, raised };
+    };
+    const plain = fight(1, 0);
+    expect(fight(0.5, 0).count).toBeGreaterThan(plain.count);
+    expect(fight(1, 0.1).raised).toBe(12);
   });
 });

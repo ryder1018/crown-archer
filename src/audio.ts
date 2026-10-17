@@ -231,6 +231,30 @@ export class Sfx {
     [392, 349, 311, 262].forEach((f, i) => this.tone(f, 0.3, 'triangle', 0.2, undefined, i * 0.2));
   }
 
+  thunder() {
+    if (!this.ready('thunder', 0.25)) return;
+    this.hiss(0.08, 5000, 0.8, 0.5, 0, 'highpass');
+    this.hiss(0.9, 260, 0.6, 0.55, 0.03, 'lowpass');
+    this.tone(55, 0.8, 'sine', 0.5, 30, 0.03);
+  }
+
+  splash() {
+    if (!this.ready('splash', 0.2)) return;
+    this.hiss(0.3, 1200, 1.2, 0.25);
+    [520, 700, 900].forEach((f, i) => this.tone(f, 0.12, 'sine', 0.08, f * 1.6, 0.05 + i * 0.06));
+  }
+
+  thud() {
+    if (!this.ready('thud', 0.3)) return;
+    this.tone(60, 0.6, 'sine', 0.9, 28);
+    this.hiss(0.6, 220, 0.6, 0.6, 0, 'lowpass');
+  }
+
+  unlockFanfare() {
+    if (!this.ready('fanfare', 1)) return;
+    [392, 523, 659, 784, 659, 784, 1047].forEach((f, i) => this.tone(f, i === 6 ? 0.8 : 0.14, 'square', 0.09, undefined, i * 0.1));
+  }
+
   /** Procedural music: each region has its own loop and boss fights switch to a tenser one. */
   setTrack(name: TrackName) {
     if (this.track === name) return;
@@ -309,7 +333,7 @@ export class Sfx {
   }
 }
 
-export type TrackName = 'river' | 'meadow' | 'snow' | 'desert' | 'volcano' | 'night' | 'boss';
+export type TrackName = 'river' | 'meadow' | 'snow' | 'desert' | 'volcano' | 'night' | 'jungle' | 'swamp' | 'sky' | 'boss';
 
 interface Track {
   bpm: number;
@@ -330,6 +354,12 @@ const TRACKS: Record<TrackName, Track> = {
   desert: { bpm: 108, chords: [[164.8, 207.7, 246.9], [174.6, 220, 261.6], [164.8, 207.7, 246.9], [146.8, 174.6, 220]], pattern: [0, 1, 0, 2, 1, 0, 4, 2], lead: 'sawtooth', leadVol: 0.07, sustain: 0.7, drums: 'march' },
   volcano: { bpm: 132, chords: [[164.8, 196, 246.9], [130.8, 164.8, 196], [146.8, 185, 220], [123.5, 155.6, 185]], pattern: [0, 0, 2, 0, 1, 0, 2, 3], lead: 'sawtooth', leadVol: 0.07, sustain: 0.6, drums: 'heavy', bass8: true },
   night: { bpm: 84, chords: [[220, 261.6, 329.6], [174.6, 220, 261.6], [146.8, 174.6, 220], [164.8, 207.7, 246.9]], pattern: [0, -1, 2, -1, 4, -1, 1, -1], lead: 'triangle', leadVol: 0.25, sustain: 1.8, drums: 'none' },
+  // jungle: bouncy marimba-like triangle over a march beat
+  jungle: { bpm: 118, chords: [[196, 246.9, 293.7], [220, 261.6, 329.6], [174.6, 220, 261.6], [196, 246.9, 293.7]], pattern: [0, 2, -1, 2, 1, -1, 4, 2], lead: 'triangle', leadVol: 0.24, sustain: 0.5, drums: 'march' },
+  // swamp: slow, murky minor with a buzzy lead
+  swamp: { bpm: 96, chords: [[146.8, 174.6, 220], [138.6, 164.8, 207.7], [130.8, 155.6, 196], [138.6, 164.8, 207.7]], pattern: [0, -1, 1, 0, -1, 2, 1, -1], lead: 'square', leadVol: 0.07, sustain: 1.1, drums: 'light' },
+  // sky: bright, airy major arpeggios
+  sky: { bpm: 128, chords: [[261.6, 329.6, 392], [293.7, 370, 440], [246.9, 311.1, 370], [220, 277.2, 329.6]], pattern: [0, 1, 2, 4, 2, 1, 3, 1], lead: 'sine', leadVol: 0.28, sustain: 1.2, drums: 'light' },
   boss: { bpm: 144, chords: [[146.8, 174.6, 220], [116.5, 146.8, 174.6], [130.8, 164.8, 196], [110, 138.6, 164.8]], pattern: [0, 2, 1, 2, 3, 2, 1, 2], lead: 'square', leadVol: 0.1, sustain: 0.6, drums: 'heavy', bass8: true },
 };
 

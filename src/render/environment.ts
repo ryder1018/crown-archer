@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { ROAD_HALF_WIDTH, type Theme } from '../sim/types';
 import { treeGeometry, type DecorKind } from './models';
-import { groundTexture, lavaTexture, seededNoise, stoneTexture, waterTexture } from './textures';
+import { cloudTexture, groundTexture, lavaTexture, seededNoise, stoneTexture, swampTexture, waterTexture } from './textures';
 
 interface ThemeDef {
   sky: number;
   road: [string, string];
   ground: [string, string] | null;
   /** what fills the sides when there is no ground */
-  liquid: 'water' | 'lava';
+  liquid: 'water' | 'lava' | 'swamp' | 'cloud';
   wall: number;
   wallTop: number;
   decor: DecorKind[];
@@ -32,6 +32,18 @@ export const THEMES: Record<Theme, ThemeDef> = {
   night: {
     sky: 0x262b52, road: ['#8d93a6', '#565b6e'], ground: ['#36463a', '#2b382e'], liquid: 'water', wall: 0x5e6475, wallTop: 0x7f8698,
     decor: ['deadtree', 'grave', 'grave'], hemiGround: 0x30365a, light: { hemi: 1.05, sun: 1.35, sunColor: 0xa8b8ff }, fog: [40, 100],
+  },
+  jungle: {
+    sky: 0x9fe3c4, road: ['#b3a57e', '#77694a'], ground: ['#3f8f3a', '#347a30'], liquid: 'water', wall: 0x7d8a5c, wallTop: 0x98a86e,
+    decor: ['palm', 'jungletree', 'ruin'], hemiGround: 0x2f6a2a, light: DAY, fog: [50, 115],
+  },
+  swamp: {
+    sky: 0x9aa88a, road: ['#8a8068', '#5a5240'], ground: null, liquid: 'swamp', wall: 0x5f5f4a, wallTop: 0x7a7a60,
+    decor: ['mushroom', 'reed', 'deadtree'], hemiGround: 0x4a6a3a, light: { hemi: 1.25, sun: 1.5, sunColor: 0xe0ffd0 }, fog: [38, 100],
+  },
+  sky: {
+    sky: 0x6aa8ff, road: ['#eef1f7', '#b4bccd'], ground: null, liquid: 'cloud', wall: 0xf2f4fa, wallTop: 0xffd76a,
+    decor: ['cloudpuff', 'cloudpuff', 'crystal'], hemiGround: 0xc8dcff, light: { hemi: 1.6, sun: 2.0, sunColor: 0xfff4dc }, fog: [60, 140],
   },
 };
 
@@ -85,15 +97,18 @@ export function buildEnvironment(theme: Theme, length: number, endD: number): En
     group.add(ground);
   } else {
     const lava = def.liquid === 'lava';
-    water = track(lava ? lavaTexture() : waterTexture());
-    water.repeat.set(lava ? 16 : 24, total / (lava ? 14 : 10));
+    const tex = { water: waterTexture, lava: lavaTexture, swamp: swampTexture, cloud: cloudTexture }[def.liquid];
+    water = track(tex());
+    const tile = { water: 10, lava: 14, swamp: 12, cloud: 26 }[def.liquid];
+    water.repeat.set(240 / tile, total / tile);
     const sea = new THREE.Mesh(
       track(new THREE.PlaneGeometry(240, total)),
-      // lava glows on its own, so it ignores the lighting
-      track(lava ? new THREE.MeshBasicMaterial({ map: water }) : new THREE.MeshLambertMaterial({ map: water })),
+      // lava glows on its own and clouds stay bright, so they ignore the lighting
+      track(lava || def.liquid === 'cloud' ? new THREE.MeshBasicMaterial({ map: water }) : new THREE.MeshLambertMaterial({ map: water })),
     );
     sea.rotation.x = -Math.PI / 2;
-    sea.position.set(0, -0.9, startZ - total / 2);
+    // the cloud sea sits far below the sky bridge
+    sea.position.set(0, def.liquid === 'cloud' ? -4 : -0.9, startZ - total / 2);
     group.add(sea);
   }
 
@@ -131,7 +146,8 @@ export function buildEnvironment(theme: Theme, length: number, endD: number): En
       const p = new THREE.Vector3();
       for (let i = 0; i < n; i++) {
         const sx = rnd() < 0.5 ? -1 : 1;
-        p.set(sx * (ROAD_HALF_WIDTH + 2.4 + rnd() * 16), def.ground ? -0.6 : -1.0, startZ - rnd() * total);
+        const y = def.ground ? -0.6 : def.liquid === 'cloud' ? (kind === 'crystal' ? -1 + rnd() * 3 : -4.2) : -1.0;
+        p.set(sx * (ROAD_HALF_WIDTH + 2.4 + rnd() * 16), y, startZ - rnd() * total);
         q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rnd() * Math.PI * 2);
         s.setScalar(0.8 + rnd() * 0.9);
         m.compose(p, q, s);
@@ -149,7 +165,7 @@ export function buildEnvironment(theme: Theme, length: number, endD: number): En
   return {
     group,
     update(dt: number) {
-      if (water) water.offset.y += dt * (def.liquid === 'lava' ? 0.015 : 0.04);
+      if (water) water.offset.y += dt * { water: 0.04, lava: 0.015, swamp: 0.008, cloud: 0.02 }[def.liquid];
     },
     dispose() {
       for (const d of disposables) d.dispose();

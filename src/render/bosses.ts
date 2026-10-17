@@ -15,8 +15,8 @@ export interface BossRig {
   accent: number;
 }
 
-type Head = 'hair' | 'tusks' | 'viking' | 'headdress' | 'rocky' | 'skull';
-type Weapon = 'club' | 'log' | 'ice' | 'sword' | 'rock' | 'staff';
+type Head = 'hair' | 'tusks' | 'viking' | 'headdress' | 'rocky' | 'skull' | 'ape' | 'witch' | 'titan';
+type Weapon = 'club' | 'log' | 'ice' | 'sword' | 'rock' | 'staff' | 'coconut' | 'hammer';
 
 interface Style {
   skin: number; shirt: number; pants: number; hair: number; belt: number; eye: number;
@@ -32,6 +32,9 @@ export const BOSS_STYLES: Record<Exclude<BossKind, 'chest'>, Style> = {
   warlord: { skin: 0xc98a5a, shirt: 0x6a2f8f, pants: 0x3a2050, hair: 0x1a1010, belt: PALETTE.gold, eye: 0xff4a2a, head: 'headdress', weapon: 'sword', accent: 0xb05cff },
   golem: { skin: 0x4a403e, shirt: 0x3a3230, pants: 0x2e2826, hair: 0x2a2220, belt: 0x2a2220, eye: 0xffa22a, head: 'rocky', weapon: 'rock', accent: 0xff7a1a, glow: 0xff6a10 },
   lich: { skin: 0xe8e2d0, shirt: 0x3a2456, pants: 0x241640, hair: 0x1a1030, belt: 0x6a4a9a, eye: 0x6aff8a, head: 'skull', weapon: 'staff', accent: 0x6aff8a, glow: 0x6aff8a },
+  ape: { skin: 0x5a3a28, shirt: 0x4a2e1e, pants: 0x3a2416, hair: 0x2a1a10, belt: 0x8a6a3a, eye: 0xffd23a, head: 'ape', weapon: 'coconut', accent: 0x8a5a2a },
+  witch: { skin: 0x8fbf6a, shirt: 0x3a2a4a, pants: 0x2a1e38, hair: 0x2a1a2a, belt: 0x6a8a3a, eye: 0xffe040, head: 'witch', weapon: 'staff', accent: 0x8aff4a },
+  titan: { skin: 0x9fb6d8, shirt: 0xe0b040, pants: 0x3a4a7a, hair: 0xf4f8ff, belt: 0xffd76a, eye: 0x7fe8ff, head: 'titan', weapon: 'hammer', accent: 0x7fd0ff, glow: 0x7fd0ff },
 };
 
 const mat = (c: number, emissive = 0) => new THREE.MeshLambertMaterial({ color: c, flatShading: true, emissive });
@@ -60,7 +63,8 @@ export function bossRig(kind: Exclude<BossKind, 'chest'>): BossRig {
   legR.position.set(0.55, 1.5, 0);
   root.add(legL, legR);
 
-  const skinny = kind === 'lich';
+  const skinny = kind === 'lich' || kind === 'witch';
+  const robed = skinny;
   const torso = new THREE.Mesh(new THREE.CylinderGeometry(skinny ? 0.9 : 1.25, skinny ? 1.15 : 1.05, 1.9, 8), shirt);
   torso.position.y = 2.45;
   const beltM = new THREE.Mesh(new THREE.CylinderGeometry(skinny ? 1.05 : 1.1, skinny ? 1.05 : 1.1, 0.3, 8), belt);
@@ -74,7 +78,7 @@ export function bossRig(kind: Exclude<BossKind, 'chest'>): BossRig {
   const eyeR = eyeL.clone();
   eyeR.position.x = 0.24;
   body.add(torso, beltM, head, eyeL, eyeR);
-  if (kind === 'lich') {
+  if (robed) {
     // a robe flaring down over the legs
     const robe = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.6, 1.6, 8, 1, true), shirt);
     robe.position.y = 0.85;
@@ -83,7 +87,7 @@ export function bossRig(kind: Exclude<BossKind, 'chest'>): BossRig {
 
   addHead(st, body, { skin, hair, eye });
   if (glow) addGlow(kind, body, glow);
-  if (st.head !== 'skull' && st.head !== 'rocky') {
+  if (st.head !== 'skull' && st.head !== 'rocky' && st.head !== 'ape' && st.head !== 'witch') {
     const strap = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.2, 0.1), belt);
     strap.position.set(0, 2.5, 1.12);
     strap.rotation.z = 0.6;
@@ -99,7 +103,7 @@ export function bossRig(kind: Exclude<BossKind, 'chest'>): BossRig {
     upper.position.y = -0.7;
     const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.75), shirt);
     sleeve.position.y = -0.15;
-    const fist = new THREE.Mesh(new THREE.IcosahedronGeometry(kind === 'golem' ? 0.62 : 0.42, 0), skin);
+    const fist = new THREE.Mesh(new THREE.IcosahedronGeometry(kind === 'golem' || kind === 'ape' ? 0.62 : 0.42, 0), skin);
     fist.position.y = -1.55;
     arm.add(upper, sleeve, fist);
     body.add(arm);
@@ -163,6 +167,42 @@ function addHead(st: Style, body: THREE.Group, m: { skin: THREE.Material; hair: 
       add(new THREE.DodecahedronGeometry(0.35, 0), rock, 0, 4.6, -0.1);
       break;
     }
+    case 'ape': {
+      const face = mat(0x9a7a5a);
+      add(new THREE.BoxGeometry(0.75, 0.42, 0.35), face, 0, 3.72, 0.55);
+      add(new THREE.BoxGeometry(0.12, 0.05, 0.05), mat(0x1a1010), -0.12, 3.8, 0.73);
+      add(new THREE.BoxGeometry(0.12, 0.05, 0.05), mat(0x1a1010), 0.12, 3.8, 0.73);
+      add(new THREE.BoxGeometry(1.0, 0.22, 0.3), m.hair, 0, 4.16, 0.55);
+      add(new THREE.BoxGeometry(0.25, 0.3, 0.2), face, -0.75, 3.95, 0);
+      add(new THREE.BoxGeometry(0.25, 0.3, 0.2), face, 0.75, 3.95, 0);
+      add(new THREE.SphereGeometry(0.75, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), m.hair, 0, 4.1, -0.1);
+      add(new THREE.SphereGeometry(1.25, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), m.hair, 0, 3.2, -0.25, -0.2);
+      break;
+    }
+    case 'witch': {
+      const hat = mat(0x2a1a3a);
+      add(new THREE.CylinderGeometry(1.25, 1.25, 0.1, 12), hat, 0, 4.4, 0);
+      add(new THREE.ConeGeometry(0.62, 1.4, 8), hat, 0, 5.1, -0.05, -0.2);
+      add(new THREE.ConeGeometry(0.22, 0.6, 6), hat, 0, 5.85, -0.4, -1.1);
+      add(new THREE.CylinderGeometry(0.64, 0.64, 0.16, 8), mat(0x8aff4a), 0, 4.52, 0);
+      add(new THREE.ConeGeometry(0.11, 0.5, 4), m.skin, 0, 3.85, 0.8, Math.PI / 2);
+      add(new THREE.BoxGeometry(0.2, 1.4, 0.15), m.hair, -0.62, 3.6, -0.2, 0, 0, 0.1);
+      add(new THREE.BoxGeometry(0.2, 1.4, 0.15), m.hair, 0.62, 3.6, -0.2, 0, 0, -0.1);
+      break;
+    }
+    case 'titan': {
+      const gold = mat(PALETTE.gold);
+      add(new THREE.CylinderGeometry(0.72, 0.76, 0.32, 8, 1, true), gold, 0, 4.45, 0);
+      for (let i = 0; i < 5; i++) {
+        const a = ((i - 2) / 5) * Math.PI * 0.9;
+        add(new THREE.ConeGeometry(0.1, 0.65, 4), gold, Math.sin(a) * 0.72, 4.85, Math.cos(a) * 0.72);
+      }
+      add(new THREE.OctahedronGeometry(0.16, 0), new THREE.MeshBasicMaterial({ color: st.accent }), 0, 4.5, 0.76);
+      add(new THREE.ConeGeometry(0.6, 1.2, 6), m.hair, 0, 3.25, 0.4, Math.PI);
+      add(new THREE.CylinderGeometry(1.5, 1.5, 0.25, 8), gold, 0, 3.25, 0, 0, 0, 0);
+      brow();
+      break;
+    }
     case 'skull': {
       const dark = new THREE.MeshBasicMaterial({ color: 0x120a18 });
       add(new THREE.BoxGeometry(0.26, 0.2, 0.08), dark, -0.24, 3.98, 0.66);
@@ -182,7 +222,7 @@ function addHead(st: Style, body: THREE.Group, m: { skin: THREE.Material; hair: 
 
 /** Glowing cracks (golem) or runes (lich) on the torso. */
 function addGlow(kind: BossKind, body: THREE.Group, glow: THREE.Material) {
-  const marks = kind === 'golem'
+  const marks = kind === 'golem' || kind === 'titan'
     ? [[-0.5, 2.8, 1.05, 0.5], [0.4, 2.2, 1.05, -0.7], [0.1, 3.0, 1.1, 0.2], [-0.2, 1.9, 1.0, 1.1]]
     : [[0, 2.7, 0.92, 0], [-0.35, 2.3, 0.88, 0.4], [0.35, 2.3, 0.88, -0.4]];
   for (const [x, y, z, rz] of marks) {
@@ -230,6 +270,18 @@ function addWeapon(st: Style, armR: THREE.Group, armL: THREE.Group) {
       add(armR, new THREE.DodecahedronGeometry(0.85, 0), mat(0x5a504c), 0, -1.9, 0.3);
       add(armL, new THREE.DodecahedronGeometry(0.75, 0), mat(0x5a504c), 0, -1.9, 0.3);
       break;
+    case 'coconut':
+      add(armL, new THREE.IcosahedronGeometry(0.55, 0), mat(0x6b4a2a), 0, -1.9, 0.35);
+      break;
+    case 'hammer': {
+      add(armR, new THREE.CylinderGeometry(0.12, 0.12, 3.0, 6), mat(0x6a5030), 0, -2.0, 0.9, Math.PI / 2.6);
+      const head = add(armR, new THREE.BoxGeometry(1.4, 0.8, 0.8), mat(0xd9e3ee), 0, -2.6, 2.1, Math.PI / 2.6);
+      const bolt = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.06), new THREE.MeshBasicMaterial({ color: st.accent }));
+      bolt.position.set(0, 0, 0.42);
+      bolt.rotation.z = 0.5;
+      head.add(bolt);
+      break;
+    }
     case 'staff': {
       add(armR, new THREE.CylinderGeometry(0.09, 0.09, 4.2, 6), mat(0x3a2a20), 0, -1.6, 0.4);
       add(armR, new THREE.SphereGeometry(0.4, 10, 8), new THREE.MeshBasicMaterial({ color: st.accent }), 0, 0.6, 0.4);

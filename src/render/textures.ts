@@ -130,6 +130,67 @@ export function lavaTexture() {
   return tex;
 }
 
+export function swampTexture() {
+  const { c, ctx } = canvas(256, 256);
+  const g = ctx.createLinearGradient(0, 0, 256, 256);
+  g.addColorStop(0, '#4f6a34');
+  g.addColorStop(1, '#3f5a2a');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 256);
+  const rnd = seededNoise(9);
+  // scum, lily pads and bubbles
+  for (let i = 0; i < 60; i++) {
+    ctx.fillStyle = `rgba(${120 + rnd() * 40}, ${150 + rnd() * 40}, 60, 0.35)`;
+    ctx.beginPath();
+    ctx.ellipse(rnd() * 256, rnd() * 256, 6 + rnd() * 18, 3 + rnd() * 8, rnd() * 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let i = 0; i < 14; i++) {
+    const x = rnd() * 256;
+    const y = rnd() * 256;
+    const r = 7 + rnd() * 6;
+    ctx.fillStyle = '#5f9a3a';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, r, 0.4, Math.PI * 2 - 0.2);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(220,255,180,0.35)';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 18; i++) {
+    ctx.beginPath();
+    ctx.arc(rnd() * 256, rnd() * 256, 2 + rnd() * 3, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+export function cloudTexture() {
+  const { c, ctx } = canvas(256, 256);
+  ctx.fillStyle = '#cfe2ff';
+  ctx.fillRect(0, 0, 256, 256);
+  const rnd = seededNoise(13);
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * 256;
+    const y = rnd() * 256;
+    const r = 12 + rnd() * 34;
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    // draw wrapped copies so the texture tiles without seams
+    for (const dx of [-256, 0, 256]) for (const dy of [-256, 0, 256]) ctx.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 export function groundTexture(base: string, speck: string) {
   const { c, ctx } = canvas(128, 128);
   ctx.fillStyle = base;
@@ -199,8 +260,13 @@ export function gateLabel() {
   return new LabelTexture(512, 256, (ctx, w, h, key) => {
     const [text, good] = key.split('|');
     const isGood = good === '1';
+    // '2' is a mystery gate: purple with a big question mark
+    const mystery = good === '2';
     const g = ctx.createLinearGradient(0, 0, 0, h);
-    if (isGood) {
+    if (mystery) {
+      g.addColorStop(0, 'rgba(190,120,255,0.9)');
+      g.addColorStop(1, 'rgba(110,40,200,0.9)');
+    } else if (isGood) {
       g.addColorStop(0, 'rgba(90,180,255,0.88)');
       g.addColorStop(1, 'rgba(25,95,230,0.88)');
     } else {
@@ -211,9 +277,10 @@ export function gateLabel() {
     roundRect(ctx, 6, 6, w - 12, h - 12, 26);
     ctx.fill();
     ctx.lineWidth = 10;
-    ctx.strokeStyle = isGood ? 'rgba(220,240,255,0.95)' : 'rgba(255,225,220,0.95)';
+    ctx.strokeStyle = mystery ? 'rgba(255,230,140,0.95)' : isGood ? 'rgba(220,240,255,0.95)' : 'rgba(255,225,220,0.95)';
     ctx.stroke();
-    outlinedText(ctx, text, w / 2, h / 2 + 8, 150, '#fff', isGood ? 'rgba(10,40,120,0.9)' : 'rgba(110,10,20,0.9)');
+    const ink = mystery ? 'rgba(60,10,110,0.9)' : isGood ? 'rgba(10,40,120,0.9)' : 'rgba(110,10,20,0.9)';
+    outlinedText(ctx, text, w / 2, h / 2 + 8, 150, mystery ? '#ffe27a' : '#fff', ink);
   });
 }
 

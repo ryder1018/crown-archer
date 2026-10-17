@@ -3,7 +3,8 @@ import { applyMod, chestCoins } from './levelgen';
 import { mulberry32, type Rng } from './rng';
 import {
   ARMY_SPEED, ARROW_RANGE, ARROW_SPEED, FORMATION_SPACING, MAX_ARMY_DISPLAY, MAX_ARROWS, ROAD_HALF_WIDTH,
-  type BossAbility, type BossKind, type GateOp, type LevelSpec, type Reward, type SkillKind, type Stats, type UnitKind,
+  NO_PERKS, type BossAbility, type BossKind, type GateOp, type LevelSpec, type Perks, type Reward, type SkillKind, type Stats,
+  type UnitKind,
 } from './types';
 
 export interface Arrow { x: number; d: number; dmg: number; life: number; alive: boolean; fire: boolean }
@@ -12,6 +13,8 @@ export interface Gate {
   id: number; row: number; d: number; x0: number; x1: number;
   op: GateOp; value: number; step: number; acc: number;
   passed: boolean; chosen: boolean; hitTime: number;
+  /** hidden "?" gate; arrows fly through it */
+  mystery: boolean;
 }
 
 export interface Unit { ox: number; od: number; alive: boolean }
@@ -31,8 +34,16 @@ export interface Barrel {
 
 export interface Hazard { id: number; d: number; x0: number; x1: number; lethality: number; passed: boolean }
 
-/** A projectile thrown by the boss, aimed at where the army stood when it was thrown. */
-export interface BossShot { id: number; x: number; d: number; r: number; t: number; total: number; lethality: number; fromX: number; fromD: number }
+/** rock: thrown projectile, leap: the boss itself, poison: bottle that leaves a pool, bolt: lightning from the sky */
+export type ShotKind = 'rock' | 'leap' | 'poison' | 'bolt';
+
+/** A boss attack that lands on a marked spot, aimed at where the army will be. */
+export interface BossShot {
+  id: number; kind: ShotKind; x: number; d: number; r: number; t: number; total: number; lethality: number; fromX: number; fromD: number;
+}
+
+/** A poison puddle on the road that drains soldiers standing in it. */
+export interface Pool { id: number; x: number; d: number; r: number; t: number; total: number }
 
 export type BossState = 'idle' | 'walk' | 'attack' | 'dead';
 
@@ -41,6 +52,7 @@ export interface Boss {
   d: number; x: number; hp: number; maxHp: number; damage: number; speed: number;
   state: BossState; attackTimer: number; hitTime: number; smashTime: number;
   throwTimer: number; summonTimer: number; shieldTimer: number; shielded: boolean; enraged: boolean;
+  leapTimer: number; leaping: boolean;
   /** treasure chest: seconds left once the army reaches it */
   chestTimer: number;
 }
@@ -68,6 +80,7 @@ export type WorldEvent =
   | { type: 'bossSmash'; n: number; frost: boolean }
   | { type: 'bossThrow'; shot: BossShot }
   | { type: 'shotLand'; shot: BossShot; n: number }
+  | { type: 'raise'; n: number; x: number; d: number }
   | { type: 'bossSummon'; squad: Squad }
   | { type: 'shieldUp' }
   | { type: 'shieldDown' }
@@ -93,11 +106,18 @@ const AGGRO_RANGE = 40;
 const ARCHER_HOLD = 18;
 const ARCHER_RANGE = 27;
 const ARCHER_INTERVAL = 1.3;
+/** most of the army a full archer squad takes out per volley */
+const ARCHER_VOLLEY = 0.07;
 const BOSS_WAKE_RANGE = 52;
 const BOSS_ARENA_GAP = 26;
 const BOSS_REACH = 2.4;
 const BOSS_ATTACK_INTERVAL = 1.3;
 const SHOT_FLIGHT = 1.4;
+const LEAP_FLIGHT = 1.2;
+const BOLT_DELAY = 1.05;
+const POOL_TIME = 5;
+/** share of the soldiers standing in poison lost per second */
+const POOL_DRAIN = 0.24;
 const SHIELD_UP = 2.5;
 const SHIELD_DOWN = 5.5;
 const SHIELD_FACTOR = 0.15;
@@ -120,6 +140,7 @@ export class World {
   readonly barrels: Barrel[] = [];
   readonly hazards: Hazard[] = [];
   readonly shots: BossShot[] = [];
+  readonly pools: Pool[] = [];
   readonly boss: Boss;
   readonly events: WorldEvent[] = [];
   /** enemies are frozen solid while this runs */
@@ -131,8 +152,12 @@ export class World {
   private nextId = 0;
   private readonly rng: Rng;
 
-  constructor(readonly level: LevelSpec, readonly stats: Stats, seed = 1, readonly skill: SkillKind | null = null) {
+  constructor(
+    readonly level: LevelSpec, readonly stats: Stats, seed = 1, readonly skill: SkillKind | null = null,
+    readonly perks: Perks = NO_PERKS,
+  ) {
     this.rng = mulberry32(seed);
+    if (skill) this.skillCharge = Math.min(1, perks.skillStart);
     this.army = {
       x: 0, targetX: 0, d: 0, count: stats.startArmy,
       fireTimer: 0.2, rapidTimer: 0, multishot: 1, engaged: false, burnTimer: 0, frostTimer: 0,
@@ -142,7 +167,7 @@ export class World {
     for (const e of level.entities) {
       if (e.kind === 'gates') {
         for (const g of e.gates) {
-          this.gates.push({ id: this.nextId++, row, d: e.d, ...g, acc: 0, passed: false, chosen: false, hitTime: -1 });
+          this.gates.push({ id: this.nextId++, row, d: e.d, ...g, mystery: !!g.mystery, acc: 0, passed: false, chosen: false, hitTime: -1 });
         }
         row++;
       } else if (e.kind === 'squad') {
@@ -162,6 +187,7 @@ export class World {
           state: 'idle', attackTimer: 0.6, hitTime: -1, smashTime: -1,
           throwTimer: def ? def.throwInterval * 0.6 : 0, summonTimer: def ? def.summonInterval * 0.5 : 0,
           shieldTimer: 3, shielded: false, enraged: false, chestTimer: -1,
+          leapTimer: def ? def.leapInterval * 0.35 : 0, leaping: false,
         };
       }
     }
@@ -224,7 +250,7 @@ export class World {
       return;
     }
     if (this.freezeTimer > 0) this.freezeTimer = Math.max(0, this.freezeTimer - dt);
-    if (this.skill && this.skillCharge < 1) this.skillCharge = Math.min(1, this.skillCharge + dt / SKILL_CHARGE_TIME);
+    if (this.skill && this.skillCharge < 1) this.skillCharge = Math.min(1, this.skillCharge + (dt / SKILL_CHARGE_TIME) * this.perks.skillCharge);
     this.moveArmy(dt);
     this.fire(dt);
     this.updateArrows(dt);
@@ -235,7 +261,9 @@ export class World {
     this.updateSquads(dt);
     this.updateBoss(dt);
     this.updateShots(dt);
-    if (this.army.count <= 0) {
+    this.updatePools(dt);
+    // poison and perks leave fractional soldiers; under half a soldier counts as wiped out
+    if (this.army.count < 0.5) {
       this.army.count = 0;
       this.state = 'lost';
       this.events.push({ type: 'lose' });
@@ -299,7 +327,7 @@ export class World {
 
   private updateArrows(dt: number) {
     const reach = this.army.d + ARROW_RANGE + 4;
-    const gates = this.gates.filter((g) => !g.passed && g.op === 'add' && g.d < reach);
+    const gates = this.gates.filter((g) => !g.passed && g.op === 'add' && !g.mystery && g.d < reach);
     const barrels = this.barrels.filter((b) => !b.broken && !b.gone && b.d < reach);
     const squads = this.squads.filter((s) => !s.gone && s.count > 0 && s.d - s.halfD < reach);
     const boss = this.boss.state !== 'dead' && this.boss.d < reach ? this.boss : null;
@@ -345,7 +373,7 @@ export class World {
   }
 
   private openChest(share: number) {
-    const coins = Math.round(chestCoins(this.level.level) * share);
+    const coins = Math.round(chestCoins(this.level.level) * share * this.perks.coinMul);
     this.coinsEarned += coins;
     this.events.push({ type: 'chestOpen', coins });
   }
@@ -394,8 +422,9 @@ export class World {
       this.events.push({ type: 'freeze' });
     } else if (r.type === 'bomb') this.bomb();
     else {
-      this.coinsEarned += r.amount;
-      this.events.push({ type: 'coins', n: r.amount, x: b.x, d: b.d });
+      const n = Math.round(r.amount * this.perks.coinMul);
+      this.coinsEarned += n;
+      this.events.push({ type: 'coins', n, x: b.x, d: b.d });
     }
     this.events.push({ type: 'barrelBreak', barrel: b });
   }
@@ -419,7 +448,7 @@ export class World {
   }
 
   private chargeSkill(amount: number) {
-    if (this.skill) this.skillCharge = Math.min(1, this.skillCharge + amount);
+    if (this.skill) this.skillCharge = Math.min(1, this.skillCharge + amount * this.perks.skillCharge);
   }
 
   private updateStorm(dt: number) {
@@ -484,6 +513,11 @@ export class World {
       s.gone = true;
       s.engaged = false;
       this.events.push({ type: 'squadDead', squad: s });
+      const raised = Math.round(s.startCount * this.perks.raise);
+      if (raised > 0 && this.army.count > 0) {
+        this.army.count += raised;
+        this.events.push({ type: 'raise', n: raised, x: s.x, d: s.d });
+      }
     }
   }
 
@@ -509,7 +543,7 @@ export class World {
       // soldiers are spread over [x - r, x + r]; the overlapping share walks into the spikes
       const r = this.armyRadius;
       const overlap = Math.max(0, Math.min(a.x + r, h.x1) - Math.max(a.x - r, h.x0));
-      const n = Math.round(a.count * (overlap / (2 * r)) * h.lethality);
+      const n = Math.round(a.count * (overlap / (2 * r)) * h.lethality * this.perks.hazardTaken);
       if (n > 0) {
         a.count = Math.max(0, a.count - n);
         this.events.push({ type: 'hazardHit', n, hazard: h });
@@ -535,7 +569,7 @@ export class World {
       if (s.aggro && !s.engaged && !frozen) {
         // archers stop at their firing line and shoot until the army reaches them
         s.holding = s.unit === 'archer' && front - a.d <= ARCHER_HOLD;
-        if (!s.holding) s.d -= s.speed * dt;
+        if (!s.holding) s.d -= s.speed * this.perks.enemySpeed * dt;
         if (s.charge) s.x += clamp(a.x - s.x, -1, 1) * (s.unit === 'cavalry' ? 2.4 : 1.6) * dt;
         if (lateral && s.d - s.halfD <= a.d + ar) s.engaged = true;
       }
@@ -543,7 +577,9 @@ export class World {
         s.volleyTimer -= dt;
         if (s.volleyTimer <= 0) {
           s.volleyTimer += ARCHER_INTERVAL;
-          const n = Math.min(Math.ceil(a.count), Math.max(1, Math.round(s.count * 0.08)));
+          // squad counts double as hit points, so cap a volley at a share of the army that shrinks as the archers fall
+          const share = ARCHER_VOLLEY * (s.count / s.startCount);
+          const n = Math.min(Math.ceil(a.count), Math.max(1, Math.round(Math.min(s.count * 0.08, a.count * share) * this.perks.meleeTaken)));
           a.count = Math.max(0, a.count - n);
           this.events.push({ type: 'enemyVolley', squad: s, n });
         }
@@ -559,7 +595,7 @@ export class World {
           s.tradeAcc -= k;
           // frozen enemies cannot fight back
           if (!frozen) {
-            a.count = Math.max(0, a.count - k);
+            a.count = Math.max(0, a.count - k * this.perks.meleeTaken);
             this.events.push({ type: 'soldierLoss', n: k });
           }
           this.damageSquad(s, k, a.x, true);
@@ -580,8 +616,19 @@ export class World {
     if (b.state === 'idle' && b.d - a.d < BOSS_WAKE_RANGE) b.state = 'walk';
     if (b.state === 'idle' || this.frozen) return;
     const rage = b.enraged ? 1.7 : 1;
+    const def = BOSSES[b.kind];
+    if (b.abilities.has('leap') && !b.leaping && b.state === 'walk') {
+      b.leapTimer -= dt;
+      if (b.leapTimer <= 0 && b.d - a.d > 14) {
+        b.leapTimer = def.leapInterval * (b.enraged ? 0.7 : 1);
+        b.leaping = true;
+        // the boss jumps at the army; it lands in front of it, crushing whoever stays in the marked spot
+        this.launch('leap', a.x, this.leadD(LEAP_FLIGHT), clamp(this.armyRadius * 0.75, 1.5, 2.6), LEAP_FLIGHT, 0.45);
+      }
+    }
+    if (b.leaping) return;
     if (b.state === 'walk') {
-      b.d -= b.speed * rage * dt;
+      b.d -= b.speed * rage * this.perks.enemySpeed * dt;
       b.x += (a.x - b.x) * Math.min(1, dt * 0.8);
       if (b.d - BOSS_REACH <= a.d + this.armyRadius) b.state = 'attack';
     }
@@ -591,28 +638,34 @@ export class World {
       if (b.attackTimer <= 0) {
         b.attackTimer += BOSS_ATTACK_INTERVAL / (b.enraged ? 1.5 : 1);
         b.smashTime = this.time;
-        const n = Math.min(Math.ceil(a.count), b.damage);
+        const n = Math.min(Math.ceil(a.count), Math.round(b.damage * this.perks.bossTaken));
         a.count -= n;
         const frost = b.abilities.has('frost');
         if (frost) a.frostTimer = 3;
         this.events.push({ type: 'bossSmash', n, frost });
       }
     }
-    const def = BOSSES[b.kind];
-    if (b.abilities.has('throw')) {
+    if (b.abilities.has('throw') || b.abilities.has('poison') || b.abilities.has('lightning')) {
       b.throwTimer -= dt;
       if (b.throwTimer <= 0) {
         b.throwTimer = def.throwInterval * (b.enraged ? 0.7 : 1);
-        // aim where the marching army will be when the shot lands, so only sidestepping avoids it
-        const arenaD = b.d - BOSS_ARENA_GAP;
-        const leadD = a.engaged ? a.d : Math.min(Math.max(a.d, arenaD), a.d + ARMY_SPEED * SHOT_FLIGHT);
-        const shot: BossShot = {
-          // the blast scales with the formation so dodging matters equally for small and big armies
-          id: this.nextId++, x: a.x, d: leadD, r: clamp(this.armyRadius * 0.6, 1.2, 2.2),
-          t: SHOT_FLIGHT, total: SHOT_FLIGHT, lethality: 0.5, fromX: b.x, fromD: b.d,
-        };
-        this.shots.push(shot);
-        this.events.push({ type: 'bossThrow', shot });
+        // the blast scales with the formation so dodging matters equally for small and big armies
+        const r = clamp(this.armyRadius * 0.6, 1.2, 2.2);
+        if (b.abilities.has('lightning')) {
+          // three bolts: one on the army, one to each side, so there is always a gap to step into
+          const lead = this.leadD(BOLT_DELAY);
+          const br = clamp(this.armyRadius * 0.55, 1.1, 2.0);
+          const side = 2.4 + br + this.rng() * 1.2;
+          this.launch('bolt', a.x, lead, br, BOLT_DELAY, 0.5);
+          for (const sx of [-1, 1]) {
+            const x = a.x + sx * side;
+            if (Math.abs(x) < ROAD_HALF_WIDTH + 0.5) this.launch('bolt', clamp(x, -ROAD_HALF_WIDTH + 0.6, ROAD_HALF_WIDTH - 0.6), lead + (this.rng() - 0.5) * 2, br, BOLT_DELAY + 0.15, 0.5);
+          }
+        } else if (b.abilities.has('poison')) {
+          this.launch('poison', a.x, this.leadD(SHOT_FLIGHT), r * 1.1, SHOT_FLIGHT, 0.12);
+        } else {
+          this.launch('rock', a.x, this.leadD(SHOT_FLIGHT), r, SHOT_FLIGHT, 0.5);
+        }
       }
     }
     if (b.abilities.has('summon')) {
@@ -620,7 +673,7 @@ export class World {
       if (b.summonTimer <= 0) {
         b.summonTimer = def.summonInterval * (b.enraged ? 0.7 : 1);
         const count = Math.max(4, Math.round(b.damage * 1.6));
-        const unit: UnitKind = b.kind === 'lich' ? 'skeleton' : 'infantry';
+        const unit: UnitKind = b.kind === 'lich' ? 'skeleton' : b.kind === 'witch' ? 'goblin' : 'infantry';
         const x = clamp(b.x + (this.rng() - 0.5) * 3, -2.5, 2.5);
         const squad = makeSquad(this.nextId++, b.d - 3.5, x, count, true, unit);
         squad.aggro = true;
@@ -652,19 +705,69 @@ export class World {
     }
   }
 
+  /** Where the marching army will be after `flight` seconds, so only sidestepping avoids the attack. */
+  private leadD(flight: number) {
+    const a = this.army;
+    const arenaD = this.boss.d - BOSS_ARENA_GAP;
+    return a.engaged ? a.d : Math.min(Math.max(a.d, arenaD), a.d + ARMY_SPEED * flight);
+  }
+
+  private launch(kind: ShotKind, x: number, d: number, r: number, flight: number, lethality: number) {
+    const b = this.boss;
+    const shot: BossShot = { id: this.nextId++, kind, x, d, r, t: flight, total: flight, lethality, fromX: b.x, fromD: b.d };
+    this.shots.push(shot);
+    this.events.push({ type: 'bossThrow', shot });
+  }
+
+  /** Share of the formation inside a circle on the road. */
+  private exposure(x: number, d: number, r: number) {
+    const a = this.army;
+    const R = this.armyRadius;
+    return circleOverlap(Math.hypot(a.x - x, a.d - d), R, r) / (Math.PI * R * R);
+  }
+
   private updateShots(dt: number) {
     const a = this.army;
+    const b = this.boss;
     for (let i = this.shots.length - 1; i >= 0; i--) {
       const s = this.shots[i];
       s.t -= dt;
       if (s.t > 0) continue;
       this.shots.splice(i, 1);
-      const R = this.armyRadius;
-      const share = circleOverlap(Math.hypot(a.x - s.x, a.d - s.d), R, s.r) / (Math.PI * R * R);
-      const n = Math.min(Math.ceil(a.count), Math.round(a.count * share * s.lethality));
+      const share = this.exposure(s.x, s.d, s.r);
+      const n = Math.min(Math.ceil(a.count), Math.round(a.count * share * s.lethality * this.perks.bossTaken));
       if (n > 0) a.count = Math.max(0, a.count - n);
+      if (s.kind === 'poison') this.pools.push({ id: this.nextId++, x: s.x, d: s.d, r: s.r * 1.15, t: POOL_TIME, total: POOL_TIME });
+      if (s.kind === 'leap' && b.state !== 'dead') {
+        b.leaping = false;
+        b.x = clamp(s.x, -ROAD_HALF_WIDTH + 2, ROAD_HALF_WIDTH - 2);
+        b.d = Math.max(s.d, a.d + this.armyRadius) + BOSS_REACH * 0.95;
+        if (b.d - BOSS_REACH <= a.d + this.armyRadius) {
+          b.state = 'attack';
+          b.attackTimer = Math.max(b.attackTimer, 0.6);
+        }
+      }
       this.events.push({ type: 'shotLand', shot: s, n });
     }
+  }
+
+  private updatePools(dt: number) {
+    const a = this.army;
+    for (let i = this.pools.length - 1; i >= 0; i--) {
+      const p = this.pools[i];
+      p.t -= dt;
+      if (p.t <= 0 || p.d < a.d - 10) {
+        this.pools.splice(i, 1);
+        continue;
+      }
+      const share = this.exposure(p.x, p.d, p.r);
+      if (share > 0) a.count = Math.max(0, a.count - a.count * share * POOL_DRAIN * this.perks.bossTaken * dt);
+    }
+  }
+
+  /** True while part of the army stands in poison. */
+  get poisoned() {
+    return this.pools.some((p) => this.exposure(p.x, p.d, p.r) > 0);
   }
 }
 

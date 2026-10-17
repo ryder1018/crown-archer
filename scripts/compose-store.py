@@ -13,25 +13,27 @@ ROOT = os.path.dirname(HERE)
 CAPTIONS = {
     'zh-TW': [
         ('選對閘門', '兵力瞬間暴增！'),
-        ('六大首領', '閃開巨石與火球！'),
+        ('九大首領', '閃開巨石與火球！'),
         ('萬箭齊發', '擊潰來襲敵軍'),
         ('施放技能', '箭雨從天而降'),
-        ('六大地區', '無盡關卡等你征服'),
+        ('九大地區', '天空之城等你征服'),
         ('寶藏關', '打爆寶箱賺金幣'),
         ('升級軍團', '稱王之路由你開創'),
+        ('收服首領', '打贏的首領變成你的英雄'),
     ],
     'en-US': [
         ('PICK THE GATE', 'Grow your army fast!'),
-        ('6 GIANT BOSSES', 'Dodge boulders and fireballs'),
+        ('9 GIANT BOSSES', 'Dodge boulders and fireballs'),
         ('RAIN ARROWS', 'Crush the enemy horde'),
         ('UNLEASH SKILLS', 'Call down an arrow storm'),
-        ('6 LANDS', 'Endless levels to conquer'),
+        ('9 LANDS', 'Up to the sky citadel'),
         ('TREASURE RUNS', 'Crack chests for coins'),
         ('UPGRADE', 'Build the mightiest army'),
+        ('RECRUIT BOSSES', 'Beaten bosses become heroes'),
     ],
 }
 
-NAMES = ['1-gates', '2-boss', '3-battle', '4-skill', '5-region', '6-treasure', '7-home']
+NAMES = ['1-gates', '2-boss', '3-battle', '4-skill', '5-region', '6-treasure', '7-home', '8-collection']
 
 
 def font(locale, size, bold=True):

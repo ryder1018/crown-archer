@@ -1,6 +1,7 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { BossKind } from '../sim/types';
-import type { World } from '../sim/world';
+import type { ShotKind, World } from '../sim/world';
 import { arrowGeometry } from './models';
 import type { Particles } from './particles';
 
@@ -74,6 +75,10 @@ class ArrowPool {
 
 interface ShotView { proj: THREE.Mesh; marker: THREE.Group; fill: THREE.Mesh }
 
+interface PoolView { mesh: THREE.Mesh; rim: THREE.Mesh }
+
+interface Bolt { mesh: THREE.Mesh; age: number }
+
 interface Shockwave { mesh: THREE.Mesh; age: number; life: number; size: number }
 
 /** Boss projectiles with landing markers, enemy volleys, the arrow storm and explosions. */
@@ -82,6 +87,11 @@ export class Effects {
   private readonly enemyArrows = new ArrowPool([0x5a3a22, 0x2a1a10, 0xd0d6de], 160, 0.75);
   private readonly stormArrows = new ArrowPool([0xffffff, 0x2f7bff, 0x7fdcff], 420, 1.7);
   private readonly shots = new Map<number, ShotView>();
+  private readonly pools = new Map<number, PoolView>();
+  private readonly bolts: Bolt[] = [];
+  private readonly poolMat = new THREE.MeshBasicMaterial({ color: 0x6adf2a, transparent: true, opacity: 0.55, depthWrite: false });
+  private readonly poolRimMat = new THREE.MeshBasicMaterial({ color: 0xc8ff6a, transparent: true, opacity: 0.8, depthWrite: false });
+  private readonly boltMat = new THREE.MeshBasicMaterial({ color: 0xeaf8ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   private readonly waves: Shockwave[] = [];
   private projGeo: THREE.BufferGeometry = new THREE.DodecahedronGeometry(0.7, 0);
   private projMat: THREE.Material = new THREE.MeshLambertMaterial({ color: 0x8a6a4a, flatShading: true });
@@ -96,6 +106,13 @@ export class Effects {
 
   constructor(private readonly particles: Particles) {
     this.group.add(this.enemyArrows.mesh, this.stormArrows.mesh);
+    const boltGeo = boltGeometry();
+    for (let i = 0; i < 4; i++) {
+      const mesh = new THREE.Mesh(boltGeo, this.boltMat.clone());
+      mesh.visible = false;
+      this.group.add(mesh);
+      this.bolts.push({ mesh, age: 1 });
+    }
     for (let i = 0; i < 6; i++) {
       const mesh = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 48), this.waveMat.clone());
       mesh.rotation.x = -Math.PI / 2;
@@ -119,6 +136,16 @@ export class Effects {
     } else if (kind === 'lich') {
       this.projGeo = new THREE.SphereGeometry(0.55, 12, 8);
       this.projMat = new THREE.MeshBasicMaterial({ color: accent });
+    } else if (kind === 'ape') {
+      this.projGeo = new THREE.IcosahedronGeometry(0.6, 0);
+      this.projMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2a, flatShading: true });
+    } else if (kind === 'witch') {
+      // a round potion flask
+      const flask = new THREE.SphereGeometry(0.5, 10, 8);
+      const neck = new THREE.CylinderGeometry(0.15, 0.18, 0.4, 8);
+      neck.translate(0, 0.55, 0);
+      this.projGeo = mergeGeometries([flask, neck]) ?? flask;
+      this.projMat = new THREE.MeshBasicMaterial({ color: 0x8aff4a });
     } else {
       this.projGeo = new THREE.DodecahedronGeometry(0.8, 0);
       this.projMat = new THREE.MeshLambertMaterial({ color: 0x7a6250, flatShading: true });
@@ -164,8 +191,62 @@ export class Effects {
     w.mesh.visible = true;
   }
 
-  shotLanded(x: number, z: number, r: number) {
+  shotLanded(kind: ShotKind, x: number, z: number, r: number) {
+    if (kind === 'bolt') {
+      const b = this.bolts.reduce((p, c) => (c.age > p.age ? c : p));
+      b.age = 0;
+      b.mesh.position.set(x, 0, z);
+      b.mesh.rotation.y = Math.random() * Math.PI;
+      b.mesh.visible = true;
+      this.particles.burst(x, 0.5, z, 0xbfefff, 24, 6, 0.14, 0.6);
+      this.wave(x, z, 0xbfefff, r * 3, 0.4);
+      return;
+    }
+    if (kind === 'poison') {
+      this.particles.burst(x, 0.5, z, 0x8aff4a, 30, 5, 0.18, 0.8);
+      this.wave(x, z, 0x8aff4a, r * 2.5, 0.5);
+      return;
+    }
+    if (kind === 'leap') {
+      this.particles.burst(x, 0.3, z, 0x9a8a6a, 40, 8, 0.25, 0.9);
+      this.wave(x, z, 0xffffff, r * 4, 0.6);
+      return;
+    }
     this.explosion(x, z, this.projColor, 0.6 + r * 0.25);
+  }
+
+  /** Keeps a bubbling puddle for every poison pool on the road. */
+  syncPools(world: World) {
+    const live = new Set<number>();
+    for (const p of world.pools) {
+      live.add(p.id);
+      let view = this.pools.get(p.id);
+      if (!view) {
+        const mesh = new THREE.Mesh(this.discGeo, this.poolMat);
+        const rim = new THREE.Mesh(this.ringGeo, this.poolRimMat);
+        mesh.rotation.x = rim.rotation.x = -Math.PI / 2;
+        this.group.add(mesh, rim);
+        view = { mesh, rim };
+        this.pools.set(p.id, view);
+      }
+      // grow in, wobble, and shrink away at the end
+      const life = Math.min(1, (p.total - p.t) / 0.25, p.t / 0.6);
+      const r = p.r * life * (1 + Math.sin(this.time * 4 + p.id) * 0.03);
+      view.mesh.position.set(p.x, 0.04, -p.d);
+      view.rim.position.set(p.x, 0.045, -p.d);
+      view.mesh.scale.set(r, r, 1);
+      view.rim.scale.set(r, r, 1);
+      if (Math.random() < 0.25) {
+        const a = Math.random() * Math.PI * 2;
+        const k = Math.sqrt(Math.random()) * p.r * 0.8;
+        this.particles.burst(p.x + Math.cos(a) * k, 0.1, -p.d + Math.sin(a) * k, 0xb8ff7a, 1, 1.2, 0.1, 0.5);
+      }
+    }
+    for (const [id, view] of this.pools) {
+      if (live.has(id)) continue;
+      this.group.remove(view.mesh, view.rim);
+      this.pools.delete(id);
+    }
   }
 
   /** Keeps a projectile + landing marker for every shot in flight. */
@@ -187,6 +268,8 @@ export class Effects {
         this.shots.set(shot.id, view);
       }
       const f = 1 - shot.t / shot.total;
+      // the leaping boss and lightning have no flying projectile, only the warning marker
+      view.proj.visible = shot.kind === 'rock' || shot.kind === 'poison';
       view.marker.position.set(shot.x, 0.05 + (shot.id % 5) * 0.004, -shot.d);
       const pulse = 1 + Math.sin(this.time * 18) * 0.04;
       view.marker.scale.set(shot.r * pulse, 1, shot.r * pulse);
@@ -211,6 +294,13 @@ export class Effects {
     this.stormArrows.update(dt, (x, z) => {
       if (Math.random() < 0.7) this.particles.burst(x, 0.3, z, 0x9fdcff, 3, 3.5, 0.14, 0.45);
     });
+    for (const b of this.bolts) {
+      if (!b.mesh.visible) continue;
+      b.age += dt;
+      const f = b.age / 0.3;
+      if (f >= 1) b.mesh.visible = false;
+      else (b.mesh.material as THREE.MeshBasicMaterial).opacity = (1 - f) * (Math.random() < 0.3 ? 0.5 : 1);
+    }
     for (const w of this.waves) {
       if (!w.mesh.visible) continue;
       w.age += dt;
@@ -230,6 +320,28 @@ export class Effects {
     this.stormArrows.clear();
     for (const view of this.shots.values()) this.group.remove(view.marker, view.proj);
     this.shots.clear();
+    for (const view of this.pools.values()) this.group.remove(view.mesh, view.rim);
+    this.pools.clear();
+    for (const b of this.bolts) b.mesh.visible = false;
     for (const w of this.waves) w.mesh.visible = false;
   }
+}
+
+/** A jagged lightning bolt from the sky down to the ground at the origin. */
+function boltGeometry() {
+  const parts: THREE.BufferGeometry[] = [];
+  let x = 0;
+  let y = 0;
+  for (let i = 0; i < 7; i++) {
+    const nx = i === 6 ? 0 : (Math.random() - 0.5) * 1.6;
+    const ny = y + 2.4;
+    const len = Math.hypot(nx - x, ny - y);
+    const seg = new THREE.BoxGeometry(0.28, len, 0.28);
+    seg.rotateZ(-Math.atan2(nx - x, ny - y));
+    seg.translate((x + nx) / 2, (y + ny) / 2, 0);
+    parts.push(seg);
+    x = nx;
+    y = ny;
+  }
+  return mergeGeometries(parts)!;
 }

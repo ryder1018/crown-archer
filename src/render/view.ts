@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { t } from '../i18n';
+import { isBossHero, skinDef, type HeroId, type SkinId } from '../meta/collection';
 import { ARROW_RANGE, ARROW_SPEED, MAX_ARMY_DISPLAY, MAX_ARROWS, type Reward, type UnitKind } from '../sim/types';
 import { type Barrel, type Gate, type Hazard, type World, type WorldEvent } from '../sim/world';
 import { bossRig, chestRig, type BossRig, type ChestRig } from './bosses';
@@ -7,13 +8,15 @@ import { Effects } from './effects';
 import { buildEnvironment, THEMES, type Environment } from './environment';
 import {
   archerGeometry, armoredGeometry, arrowGeometry, barrelGeometry, cavalryGeometry, enemyArcherGeometry, enemyGeometry,
-  kingGroup, PALETTE, skeletonGeometry, spikeRollerGeometry,
+  goblinGeometry, heroMesh, PALETTE, skeletonGeometry, spikeRollerGeometry,
 } from './models';
 import { Overlay } from './overlay';
 import { Particles } from './particles';
 import { blobTexture, crateLabel, gateLabel, hazardStripeTexture, hpLabel, LabelTexture, ringTexture } from './textures';
 
-const UNIT_CAPACITY: Record<UnitKind, number> = { infantry: 1800, cavalry: 700, archer: 900, armored: 900, skeleton: 700 };
+const UNIT_CAPACITY: Record<UnitKind, number> = { infantry: 1800, cavalry: 700, archer: 900, armored: 900, skeleton: 700, goblin: 900 };
+/** boss rigs are about 5.5 tall; as heroes they stand a head above the king */
+const BOSS_HERO_SCALE = 0.5;
 const SLOT_OFFSET = 3;
 const GOLDEN = 2.39996;
 const ICE = new THREE.Color(0x9fdcff);
@@ -60,8 +63,14 @@ export function rewardText(r: Reward) {
 }
 
 const UNIT_PARTICLE: Record<UnitKind, number> = {
-  infantry: PALETTE.red, cavalry: 0x6b4a32, archer: 0xb8322f, armored: 0x8d99a8, skeleton: 0xe8e2d0,
+  infantry: PALETTE.red, cavalry: 0x6b4a32, archer: 0xb8322f, armored: 0x8d99a8, skeleton: 0xe8e2d0, goblin: 0x7fb04a,
 };
+
+export function gateLabelKey(g: Gate) {
+  // mystery gates stay hidden until the army walks through, then show what they were
+  if (g.mystery && !g.passed) return '?|2';
+  return `${gateText(g)}|${gateIsGood(g) ? 1 : 0}`;
+}
 
 export class GameView {
   readonly renderer: THREE.WebGLRenderer;
@@ -78,7 +87,12 @@ export class GameView {
   private readonly fireArrowMesh: THREE.InstancedMesh;
   private readonly particles = new Particles();
   private readonly effects = new Effects(this.particles);
-  private readonly king: THREE.Mesh;
+  private hero: THREE.Object3D;
+  private heroRig: BossRig | null = null;
+  private heroId: HeroId = 'king';
+  private skinId: SkinId = 'azure';
+  private soldierColor: number = PALETTE.blue;
+  private thumbs = new Map<string, string>();
   private readonly armyShadow: THREE.Mesh;
   private readonly ring: THREE.Mesh;
   private readonly blobTex = blobTexture();
@@ -132,6 +146,7 @@ export class GameView {
     this.armyMesh = instanced(archerGeometry(), this.armyMat, MAX_ARMY_DISPLAY);
     const unitGeo: Record<UnitKind, () => THREE.BufferGeometry> = {
       infantry: enemyGeometry, cavalry: cavalryGeometry, archer: enemyArcherGeometry, armored: armoredGeometry, skeleton: skeletonGeometry,
+      goblin: goblinGeometry,
     };
     this.enemyMeshes = Object.fromEntries(
       (Object.keys(unitGeo) as UnitKind[]).map((k) => [k, instanced(unitGeo[k](), this.enemyMat, UNIT_CAPACITY[k])]),
@@ -140,7 +155,7 @@ export class GameView {
     this.fireArrowMesh = instanced(arrowGeometry(0xff7a10, 0xff2a00, 0xffe066), new THREE.MeshBasicMaterial({ vertexColors: true }), MAX_ARROWS);
     for (let i = 0; i < MAX_ARMY_DISPLAY; i++) this.soldierPhase[i] = Math.random() * Math.PI * 2;
 
-    this.king = kingGroup();
+    this.hero = heroMesh('king');
     this.shadowMat = new THREE.MeshBasicMaterial({ map: this.blobTex, transparent: true, depthWrite: false });
     this.armyShadow = new THREE.Mesh(this.shadowGeo, this.shadowMat);
     this.armyShadow.rotation.x = -Math.PI / 2;
@@ -154,8 +169,92 @@ export class GameView {
 
     this.scene.add(
       this.armyShadow, this.armyMesh, ...Object.values(this.enemyMeshes), this.arrowMesh, this.fireArrowMesh,
-      this.particles.mesh, this.effects.group, this.king, this.ring, this.levelGroup,
+      this.particles.mesh, this.effects.group, this.hero, this.ring, this.levelGroup,
     );
+  }
+
+  /** Swaps the hero leading the army and the army's colours. */
+  setLook(hero: HeroId, skin: SkinId) {
+    if (hero !== this.heroId || !this.hero.parent) {
+      this.scene.remove(this.hero);
+      disposeTree(this.hero);
+      this.heroId = hero;
+      const built = buildHero(hero);
+      this.hero = built.root;
+      this.heroRig = built.rig;
+      this.scene.add(this.hero);
+    }
+    if (skin !== this.skinId) {
+      this.skinId = skin;
+      const [tunic, trim, fletch] = skinDef(skin).colors;
+      this.armyMesh.geometry.dispose();
+      this.armyMesh.geometry = archerGeometry([tunic, trim]);
+      this.arrowMesh.geometry.dispose();
+      this.arrowMesh.geometry = arrowGeometry(0xfff4d6, fletch, 0xe8f0ff);
+      this.soldierColor = tunic;
+    }
+  }
+
+  /** Renders a small portrait of a hero or an army skin for the collection screen. Cached. */
+  thumbnail(kind: 'hero' | 'skin', id: string): string {
+    const key = `${kind}:${id}`;
+    const cached = this.thumbs.get(key);
+    if (cached) return cached;
+    const size = 192;
+    const scene = new THREE.Scene();
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x6688aa, 1.7));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+    sun.position.set(-3, 6, -6);
+    scene.add(sun, new THREE.AmbientLight(0xffffff, 0.3));
+    const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
+    let subject: THREE.Object3D;
+    if (kind === 'hero') {
+      subject = buildHero(id as HeroId).root;
+      const tall = isBossHero(id as HeroId);
+      cam.position.set(-1.6, tall ? 2.0 : 1.5, -4.2);
+      cam.lookAt(0, tall ? 1.15 : 0.85, 0);
+    } else {
+      subject = new THREE.Group();
+      const [tunic, trim, fletch] = skinDef(id as SkinId).colors;
+      const geo = archerGeometry([tunic, trim]);
+      const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+      for (const [x, z, sc] of [[0, 0, 1.5], [-0.62, 0.45, 1.3], [0.62, 0.45, 1.3]]) {
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(x, 0, z);
+        m.scale.setScalar(sc);
+        subject.add(m);
+      }
+      const arrow = new THREE.Mesh(arrowGeometry(0xfff4d6, fletch, 0xe8f0ff), new THREE.MeshBasicMaterial({ vertexColors: true }));
+      arrow.position.set(0.2, 1.95, 0);
+      arrow.rotation.set(0.3, 0.9, 0);
+      subject.add(arrow);
+      cam.position.set(-1.4, 1.9, -3.8);
+      cam.lookAt(0, 0.85, 0.2);
+    }
+    scene.add(subject);
+    const rt = new THREE.WebGLRenderTarget(size, size, { samples: 4 });
+    rt.texture.colorSpace = THREE.SRGBColorSpace;
+    const prevClear = this.renderer.getClearAlpha();
+    this.renderer.setClearAlpha(0);
+    this.renderer.setRenderTarget(rt);
+    this.renderer.clear();
+    this.renderer.render(scene, cam);
+    const px = new Uint8Array(size * size * 4);
+    this.renderer.readRenderTargetPixels(rt, 0, 0, size, size, px);
+    this.renderer.setRenderTarget(null);
+    this.renderer.setClearAlpha(prevClear);
+    rt.dispose();
+    disposeTree(subject);
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d')!;
+    const img = ctx.createImageData(size, size);
+    // WebGL rows start at the bottom
+    for (let y = 0; y < size; y++) img.data.set(px.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
+    ctx.putImageData(img, 0, 0);
+    const url = c.toDataURL('image/png');
+    this.thumbs.set(key, url);
+    return url;
   }
 
   /** Lowers the render resolution one step; returns false when already at the floor. */
@@ -200,7 +299,7 @@ export class GameView {
       const group = new THREE.Group();
       const w = g.x1 - g.x0;
       const label = gateLabel();
-      label.set(`${gateText(g)}|${gateIsGood(g) ? 1 : 0}`);
+      label.set(gateLabelKey(g));
       const mat = new THREE.MeshBasicMaterial({ map: label.texture, transparent: true, depthWrite: false, side: THREE.DoubleSide });
       const panel = new THREE.Mesh(this.keep(new THREE.PlaneGeometry(w - 0.5, 2.3)), mat);
       panel.position.y = 1.55;
@@ -305,7 +404,6 @@ export class GameView {
     this.bossDeadAge = -1;
     this.kingFall = 0;
     this.chestShake = 0;
-    this.king.rotation.set(0, 0, 0);
     this.camX = world.army.x * 0.3;
     this.camZ = -world.army.d;
     this.particles.clear();
@@ -373,12 +471,13 @@ export class GameView {
           const good = ev.delta >= 0;
           this.overlay.popup(this.armyAnchor(world, 2.6), `${good ? '+' : ''}${ev.delta}`, good ? 'pop-good' : 'pop-bad', 1.2);
           this.particles.burst(a.x, 1.2, -a.d, good ? PALETTE.blueLight : PALETTE.red, 24, 5, 0.14, 0.7);
+          if (ev.gate.mystery) this.particles.burst(a.x, 2, -a.d, 0xc48aff, 40, 6, 0.16, 0.9);
           if (!good) this.shake = Math.max(this.shake, 0.25);
           break;
         }
         case 'barrelBreak': {
           const br = ev.barrel;
-          const color = br.small ? PALETTE.blue : PALETTE.wood;
+          const color = br.small ? this.soldierColor : PALETTE.wood;
           this.particles.burst(br.x, 0.8, -br.d, color, br.small ? 14 : 30, br.small ? 5 : 7, br.small ? 0.2 : 0.28, 0.9);
           const text = br.small ? `+${br.reward.amount}` : rewardText(br.reward);
           this.overlay.popup(v3.set(br.x, 2, -br.d), text, br.reward.type === 'coins' ? 'pop-coin' : 'pop-good', 1.2);
@@ -397,9 +496,13 @@ export class GameView {
         case 'bossThrow':
           break;
         case 'shotLand':
-          this.effects.shotLanded(ev.shot.x, -ev.shot.d, ev.shot.r);
-          this.shake = Math.max(this.shake, 0.6);
+          this.effects.shotLanded(ev.shot.kind, ev.shot.x, -ev.shot.d, ev.shot.r);
+          this.shake = Math.max(this.shake, ev.shot.kind === 'leap' ? 1 : ev.shot.kind === 'poison' ? 0.3 : 0.6);
           if (ev.n > 0) this.overlay.popup(this.armyAnchor(world, 2.8), `-${ev.n}`, 'pop-bad', 1.1);
+          break;
+        case 'raise':
+          this.particles.burst(ev.x, 1, -ev.d, 0x6aff8a, 26, 4, 0.14, 0.9);
+          this.overlay.popup(this.armyAnchor(world, 3), `+${ev.n}`, 'pop-good', 1.1);
           break;
         case 'bossSummon':
           this.particles.burst(ev.squad.x, 0.6, -ev.squad.d, this.boss?.accent ?? 0xb05cff, 40, 5, 0.16, 0.9);
@@ -452,7 +555,7 @@ export class GameView {
         case 'hazardHit': {
           const h = ev.hazard;
           this.overlay.popup(this.armyAnchor(world, 2.6), `-${ev.n}`, 'pop-bad', 1.1);
-          this.particles.burst((h.x0 + h.x1) / 2, 0.8, -h.d, PALETTE.blue, 22, 6, 0.16, 0.8);
+          this.particles.burst((h.x0 + h.x1) / 2, 0.8, -h.d, this.soldierColor, 22, 6, 0.16, 0.8);
           this.shake = Math.max(this.shake, 0.5);
           break;
         }
@@ -475,6 +578,7 @@ export class GameView {
     }
     this.syncBoss(world, dt);
     this.effects.syncShots(world);
+    this.effects.syncPools(world);
     this.effects.update(dt);
     this.particles.update(dt);
     this.env?.update(dt);
@@ -491,7 +595,7 @@ export class GameView {
     if (target < this.armyShown) {
       for (let i = target; i < this.armyShown; i++) {
         slot(i, pos);
-        this.particles.burst(a.x + pos.x, 0.5, -a.d + pos.z, PALETTE.blue, 2, 3, 0.12, 0.5);
+        this.particles.burst(a.x + pos.x, 0.5, -a.d + pos.z, this.soldierColor, 2, 3, 0.12, 0.5);
         this.soldierScale[i] = 0;
       }
     }
@@ -516,8 +620,24 @@ export class GameView {
     this.armyMesh.instanceMatrix.needsUpdate = true;
 
     if (a.count <= 0) this.kingFall = Math.min(1, this.kingFall + dt * 2.5);
-    this.king.position.set(a.x, moving ? Math.abs(Math.sin(this.time * 9)) * 0.08 : 0, -a.d);
-    this.king.rotation.set(-this.kingFall * Math.PI / 2, 0, lean * -0.6);
+    this.hero.position.set(a.x, moving ? Math.abs(Math.sin(this.time * 9)) * 0.08 : 0, -a.d);
+    const rig = this.heroRig;
+    if (rig) {
+      // boss heroes face the enemy (their rigs face +z) and stride with the army
+      rig.root.rotation.set(this.kingFall * Math.PI / 2, Math.PI, lean * 0.6);
+      const w = moving ? Math.sin(this.time * 9) : 0;
+      rig.legL.rotation.x = w * 0.5;
+      rig.legR.rotation.x = -w * 0.5;
+      rig.armL.rotation.x = -w * 0.4;
+      rig.armR.rotation.x = w * 0.3 - (a.engaged ? 1.2 + Math.sin(this.time * 12) * 0.6 : 0.2);
+      rig.root.position.y = 0;
+    } else {
+      this.hero.rotation.set(-this.kingFall * Math.PI / 2, 0, lean * -0.6);
+    }
+    if (world.poisoned && Math.random() < dt * 30) {
+      const r0 = world.armyRadius;
+      this.particles.burst(a.x + (Math.random() - 0.5) * r0 * 1.6, 0.8, -a.d + (Math.random() - 0.5) * r0 * 1.6, 0x8aff4a, 2, 1.8, 0.1, 0.6);
+    }
 
     const r = world.armyRadius * 2 + 1.2;
     this.armyShadow.position.set(a.x, 0.02, -a.d);
@@ -533,7 +653,7 @@ export class GameView {
     // frozen enemies glow icy blue
     this.enemyMat.color.copy(frozen ? ICE : WHITE);
     this.enemyMat.emissive.setRGB(frozen ? 0.25 : 0, frozen ? 0.45 : 0, frozen ? 0.65 : 0);
-    const counts: Record<UnitKind, number> = { infantry: 0, cavalry: 0, archer: 0, armored: 0, skeleton: 0 };
+    const counts: Record<UnitKind, number> = { infantry: 0, cavalry: 0, archer: 0, armored: 0, skeleton: 0, goblin: 0 };
     const swing = Math.sin(this.time * 10);
     for (const s of world.squads) {
       const visible = !s.gone && s.d - a.d < 110;
@@ -596,7 +716,7 @@ export class GameView {
     const a = world.army;
     for (const gv of this.gates) {
       const g = gv.gate;
-      gv.label.set(`${gateText(g)}|${gateIsGood(g) ? 1 : 0}`);
+      gv.label.set(gateLabelKey(g));
       const since = world.time - g.hitTime;
       let pulse = g.hitTime >= 0 && since < 0.12 ? 1 + (0.12 - since) * 0.6 : 1;
       if (g.hitTime !== gv.lastHit && g.hitTime >= 0) {
@@ -640,6 +760,19 @@ export class GameView {
     const rig = this.boss;
     if (!rig) return;
     rig.root.position.set(b.x, 0, -b.d);
+    const leap = b.leaping ? world.shots.find((s) => s.kind === 'leap') : undefined;
+    if (leap) {
+      // fly along an arc from where it jumped to the marked landing spot
+      const f = 1 - leap.t / leap.total;
+      const tx = leap.x;
+      const td = leap.d + 2.3;
+      rig.root.position.set(leap.fromX + (tx - leap.fromX) * f, Math.sin(f * Math.PI) * 9, -(leap.fromD + (td - leap.fromD) * f));
+      rig.legL.rotation.x = rig.legR.rotation.x = -0.9;
+      rig.armL.rotation.x = rig.armR.rotation.x = -2.8;
+      rig.body.rotation.x = 0.2;
+      this.bossShadow?.position.set(rig.root.position.x, 0.03, rig.root.position.z);
+      return;
+    }
     const flash = world.time - b.hitTime < 0.06 ? 0.35 : 0;
     const rage = b.enraged ? 0.25 + Math.sin(this.time * 10) * 0.12 : 0;
     for (const m of rig.materials) {
@@ -685,7 +818,7 @@ export class GameView {
       rig.armL.rotation.x = rig.armR.rotation.x = Math.sin(this.time * 2) * 0.1;
     }
     // throwing arm swings back right after a throw
-    const thrown = world.shots.find((s) => s.total - s.t < 0.35);
+    const thrown = world.shots.find((s) => (s.kind === 'rock' || s.kind === 'poison') && s.total - s.t < 0.35);
     if (thrown && b.state === 'walk') rig.armL.rotation.x = -2.4;
   }
 
@@ -715,6 +848,12 @@ export class GameView {
       this.ring.scale.set(s, s, 1);
       (this.ring.material as THREE.MeshBasicMaterial).opacity = 1 - f;
     }
+  }
+
+  /** Jumps the camera to where it is heading (used when frames were simulated without rendering). */
+  snapCamera(world: World) {
+    this.camX = world.army.x * 0.35;
+    this.camZ = -world.army.d;
   }
 
   private updateCamera(world: World, dt: number) {
@@ -748,4 +887,24 @@ export class GameView {
     this.overlay.setBoss(cam, showBoss ? v3.set(b.x, b.kind === 'chest' ? 4.6 : 8.6, -b.d) : null, b.hp, b.maxHp, name, sub, b.shielded);
     this.overlay.update(cam, dt);
   }
+}
+
+function buildHero(id: HeroId): { root: THREE.Object3D; rig: BossRig | null } {
+  if (isBossHero(id)) {
+    const rig = bossRig(id);
+    rig.root.scale.setScalar(BOSS_HERO_SCALE);
+    rig.root.rotation.y = Math.PI;
+    return { root: rig.root, rig };
+  }
+  return { root: heroMesh(id as 'king' | 'knight' | 'ranger' | 'mage'), rig: null };
+}
+
+function disposeTree(root: THREE.Object3D) {
+  root.traverse((o) => {
+    if (o instanceof THREE.Mesh) {
+      o.geometry.dispose();
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) m.dispose();
+    }
+  });
 }

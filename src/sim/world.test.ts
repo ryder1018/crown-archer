@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { referenceStats, statsFor } from '../meta/progression';
 import { botSteer } from './bot';
+import { unlockedSkills } from './content';
 import { applyMod, generateLevel } from './levelgen';
 import { World } from './world';
 import type { LevelSpec, Stats } from './types';
 
+/** Autopilot run with the skill a player has at that level (the arrow storm from level 3). */
 function play(level: LevelSpec, stats: Stats, seed = 1) {
-  const w = new World(level, stats, seed);
+  const w = new World(level, stats, seed, unlockedSkills(level.level)[0] ?? null);
   const dt = 1 / 60;
   for (let i = 0; i < 60 * 240 && w.state === 'playing'; i++) {
     botSteer(w);

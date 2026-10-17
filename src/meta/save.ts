@@ -1,5 +1,6 @@
 import { Preferences } from '@capacitor/preferences';
 import type { SkillKind } from '../sim/types';
+import { HEROES, SKINS, type HeroId, type SkinId } from './collection';
 import type { UpgradeLevels } from './progression';
 
 export interface SaveData {
@@ -15,6 +16,13 @@ export interface SaveData {
   skill: SkillKind | null;
   /** content the player has been introduced to, e.g. "boss:frost" */
   seen: string[];
+  /** hero leading the army, and every hero the player owns */
+  hero: HeroId;
+  heroes: HeroId[];
+  skin: SkinId;
+  skins: SkinId[];
+  /** day the daily chest was last opened, see todayKey() */
+  daily: string;
 }
 
 const KEY = 'crown-archers-save';
@@ -30,7 +38,20 @@ export function defaultSave(): SaveData {
     stats: { wins: 0, losses: 0, bestArmy: 0 },
     skill: null,
     seen: [],
+    hero: 'king',
+    heroes: ['king'],
+    skin: 'azure',
+    skins: ['azure'],
+    daily: '',
   };
+}
+
+const HERO_IDS = new Set<string>(HEROES.map((h) => h.id));
+const SKIN_IDS = new Set<string>(SKINS.map((s) => s.id));
+
+function idList<T extends string>(raw: unknown, valid: Set<string>, base: T): T[] {
+  const list = Array.isArray(raw) ? raw.filter((x): x is T => typeof x === 'string' && valid.has(x)) : [];
+  return [...new Set([base, ...list])];
 }
 
 export function parseSave(raw: string | null): SaveData {
@@ -38,7 +59,7 @@ export function parseSave(raw: string | null): SaveData {
   if (!raw) return base;
   try {
     const data = JSON.parse(raw) as Partial<SaveData>;
-    return {
+    const out: SaveData = {
       ...base,
       ...data,
       version: 1,
@@ -50,7 +71,13 @@ export function parseSave(raw: string | null): SaveData {
       stats: { ...base.stats, ...data.stats },
       skill: data.skill === 'storm' || data.skill === 'freeze' || data.skill === 'horn' ? data.skill : null,
       seen: Array.isArray(data.seen) ? data.seen.filter((x): x is string => typeof x === 'string') : [],
+      heroes: idList(data.heroes, HERO_IDS, base.hero),
+      skins: idList(data.skins, SKIN_IDS, base.skin),
+      daily: typeof data.daily === 'string' ? data.daily : '',
     };
+    if (!out.heroes.includes(out.hero)) out.hero = base.hero;
+    if (!out.skins.includes(out.skin)) out.skin = base.skin;
+    return out;
   } catch {
     return base;
   }

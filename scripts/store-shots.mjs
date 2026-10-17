@@ -19,8 +19,9 @@ const shot = async (name) => {
   await page.screenshot({ path: `${out}/${name}.png` });
 };
 const setup = (level, up = 6) => page.evaluate(([lv, u]) => {
-  const seen = ['theme:meadow', 'theme:snow', 'theme:desert', 'theme:volcano', 'theme:night', 'boss:troll', 'boss:frost', 'boss:warlord', 'boss:golem', 'boss:lich',
-    'unit:cavalry', 'unit:archer', 'unit:armored', 'item:fire', 'item:freeze', 'item:bomb', 'skill:storm', 'skill:freeze', 'skill:horn'];
+  const seen = ['theme:meadow', 'theme:snow', 'theme:desert', 'theme:volcano', 'theme:night', 'theme:jungle', 'theme:swamp', 'theme:sky',
+    'boss:troll', 'boss:frost', 'boss:warlord', 'boss:golem', 'boss:lich', 'boss:ape', 'boss:witch', 'boss:titan',
+    'unit:cavalry', 'unit:archer', 'unit:armored', 'unit:goblin', 'item:fire', 'item:freeze', 'item:bomb', 'skill:storm', 'skill:freeze', 'skill:horn', 'tip:mystery'];
   window.game.debugSetSave({ level: lv, coins: 12850, failStreak: 0, skill: 'storm', seen, upgrades: { army: u, rate: u, damage: u, income: u } });
 }, [level, up]);
 
@@ -55,14 +56,26 @@ await capture('4-skill', [9, 10, 8, 6], 3, (w) => {
   if (w.skillCharge >= 1 && target && w.boss.state === 'idle') w.useSkill();
   return w.stormActive && target;
 }, [55, true]);
-await capture('5-region', [29, 27, 26], 18, (w) =>
-  w.squads.some((s) => s.unit === 'skeleton' && !s.gone && s.d - w.army.d < 28) && w.boss.state === 'walk');
+await capture('5-region', [43, 44, 42], 14, (w) =>
+  w.shots.filter((s) => s.kind === 'bolt').length >= 2 && w.shots.some((s) => s.t < 0.5), [75, false]);
 await capture('6-treasure', [14, 21, 28], 9, (w) => w.boss.chestTimer > 0 && w.boss.chestTimer < 10 && w.boss.hp < w.boss.maxHp * 0.7);
 
 // home with upgrades and a skill
 await setup(14, 7);
+await page.evaluate(() => window.game.debugSetSave({ daily: '', hero: 'knight', heroes: ['king', 'knight', 'giant', 'troll'] }));
 await page.waitForTimeout(600);
 await shot('7-home');
+
+// the hero collection, with a few bosses already recruited
+await setup(33, 18);
+await page.evaluate(() => window.game.debugSetSave({
+  coins: 2600, hero: 'golem', heroes: ['king', 'knight', 'ranger', 'giant', 'troll', 'frost', 'warlord', 'golem', 'lich'],
+  skins: ['azure', 'violet'], skin: 'violet',
+  seen: ['hero:king', 'hero:knight', 'hero:ranger', 'hero:giant', 'hero:troll', 'hero:frost', 'hero:warlord', 'hero:golem', 'hero:lich', 'skin:azure', 'skin:violet'],
+}));
+await page.click('#btn-collection');
+await page.evaluate(() => document.querySelector('#col-grid').scrollTo(0, 260));
+await shot('8-collection');
 
 await browser.close();
 console.log('saved to', out);

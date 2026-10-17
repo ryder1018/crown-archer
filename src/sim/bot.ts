@@ -9,12 +9,13 @@ export function botSteer(w: World) {
   if (w.skillCharge >= 1 && (w.boss.state === 'walk' || w.boss.state === 'attack' || w.squads.some((s) => !s.gone && s.aggro && s.count > a.count * 0.5))) {
     w.useSkill();
   }
-  // step out of the landing zone of incoming boss projectiles
-  if (w.shots.length) {
+  // step out of the landing zone of incoming boss attacks and out of poison on the road
+  const danger = [...w.shots, ...w.pools.filter((p) => Math.abs(p.d - a.d) < p.r + w.armyRadius + 3)];
+  if (danger.length) {
     let bestX = a.x;
     let bestScore = -Infinity;
     for (let x = -ROAD_HALF_WIDTH + 0.5; x <= ROAD_HALF_WIDTH - 0.5; x += 0.5) {
-      const clearance = Math.min(...w.shots.map((s) => Math.abs(x - s.x) - s.r));
+      const clearance = Math.min(...danger.map((s) => Math.abs(x - s.x) - s.r));
       const score = Math.min(clearance, w.armyRadius + 0.5) - Math.abs(x - a.x) * 0.05;
       if (score > bestScore) {
         bestScore = score;

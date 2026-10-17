@@ -6,12 +6,15 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar } from '@capacitor/status-bar';
 import { sfx } from './audio';
 import { formatCount, t } from './i18n';
+import {
+  dailyCoins, earnedHeroes, heroForWin, heroPerks, HEROES, heroStats, SKINS, todayKey, type HeroId, type SkinId,
+} from './meta/collection';
 import { levelReward, statsFor, upgradeCost, UPGRADE_KINDS, type UpgradeKind } from './meta/progression';
 import { loadSave, writeSave, type SaveData } from './meta/save';
 import { GameView } from './render/view';
 import { botSteer } from './sim/bot';
-import { REWARD_FROM, SKILL_UNLOCK, SKILLS, unlockedSkills } from './sim/content';
-import { generateLevel } from './sim/levelgen';
+import { CYCLE, REWARD_FROM, SKILL_UNLOCK, SKILLS, unlockedSkills } from './sim/content';
+import { generateLevel, MYSTERY_FROM } from './sim/levelgen';
 import { ROAD_HALF_WIDTH, type SkillKind } from './sim/types';
 import { World } from './sim/world';
 
@@ -54,6 +57,8 @@ class Game {
   private banners: BannerMsg[] = [];
   private bannerTimer: number | null = null;
   private skillWasReady = false;
+  private mysteryTipShown = false;
+  private colTab: 'heroes' | 'skins' = 'heroes';
 
   constructor() {
     this.view = new GameView($('#scene'), $('#overlay'));
@@ -61,6 +66,7 @@ class Game {
 
   async boot() {
     this.save = await loadSave();
+    this.backfillCollection();
     sfx.soundOn = this.save.settings.sound;
     sfx.musicOn = this.save.settings.music;
     try {
@@ -85,6 +91,13 @@ class Game {
       else sfx.resume();
     });
     document.body.classList.add('ready');
+  }
+
+  /** Saves from before the collection existed still get the heroes their progress has earned. */
+  private backfillCollection() {
+    const s = this.save;
+    for (const h of earnedHeroes(s.level)) if (!s.heroes.includes(h)) s.heroes.push(h);
+    if (s.level > CYCLE && !s.skins.includes('gold')) s.skins.push('gold');
   }
 
   private onBackground() {
@@ -114,10 +127,13 @@ class Game {
 
   private newWorld() {
     const level = generateLevel(this.save.level, this.save.failStreak);
-    this.world = new World(level, statsFor(this.save.upgrades), (Date.now() & 0xffff) + 1, this.equippedSkill());
+    const hero = this.save.hero;
+    this.world = new World(level, heroStats(statsFor(this.save.upgrades), hero), (Date.now() & 0xffff) + 1, this.equippedSkill(), heroPerks(hero));
+    this.view.setLook(hero, this.save.skin);
     this.view.load(this.world);
     this.bossAnnounced = false;
     this.gateTipShown = false;
+    this.mysteryTipShown = false;
     this.skillWasReady = false;
     sfx.setTrack(level.theme);
     this.clearBanners();
@@ -217,11 +233,17 @@ class Game {
           this.haptic('success');
           break;
         case 'bossThrow':
-          sfx.whoosh();
+          if (ev.shot.kind !== 'bolt') sfx.whoosh();
           break;
         case 'shotLand':
-          sfx.crash();
-          if (ev.n > 0) this.haptic('medium');
+          if (ev.shot.kind === 'bolt') sfx.thunder();
+          else if (ev.shot.kind === 'poison') sfx.splash();
+          else if (ev.shot.kind === 'leap') sfx.thud();
+          else sfx.crash();
+          if (ev.n > 0 || ev.shot.kind === 'leap') this.haptic(ev.shot.kind === 'leap' ? 'heavy' : 'medium');
+          break;
+        case 'raise':
+          sfx.summon();
           break;
         case 'bossSummon':
           sfx.summon();
@@ -268,6 +290,13 @@ class Game {
       if (g) {
         this.gateTipShown = true;
         this.banner({ title: t.gateTip, kind: 'tip' });
+      }
+    }
+    if (!this.mysteryTipShown && this.save.level >= MYSTERY_FROM) {
+      const g = w.gates.find((x) => !x.passed && x.mystery && x.d - w.army.d < 36);
+      if (g) {
+        this.mysteryTipShown = true;
+        if (this.markSeen('tip:mystery')) this.banner({ title: t.mysteryTip, kind: 'tip' });
       }
     }
     if (!this.bossAnnounced && w.boss.state === 'walk') {
@@ -331,6 +360,20 @@ class Game {
     window.addEventListener('pointercancel', end);
 
     $('#btn-play').addEventListener('click', () => this.start());
+    $('#btn-collection').addEventListener('click', () => this.openCollection());
+    $('#btn-daily').addEventListener('click', () => this.claimDaily());
+    $('#btn-col-close').addEventListener('click', () => {
+      this.click();
+      this.hideModal('#collection');
+      this.renderHomeButtons();
+    });
+    for (const tab of ['heroes', 'skins'] as const) {
+      $(`#tab-${tab}`).addEventListener('click', () => {
+        this.click();
+        this.colTab = tab;
+        this.renderCollection();
+      });
+    }
     $('#btn-skill').addEventListener('click', () => {
       if (this.mode === 'playing' && this.world.useSkill()) this.onEvents();
     });
@@ -401,6 +444,12 @@ class Game {
     $('#lbl-haptics').textContent = t.haptics;
     $('#lbl-privacy').textContent = t.privacy;
     $('#btn-settings-close').textContent = t.close;
+    $('#lbl-collection').textContent = t.collectionShort;
+    $('#lbl-daily').textContent = t.dailyShort;
+    $('#col-title').textContent = t.collection;
+    $('#tab-heroes').textContent = t.tab_heroes;
+    $('#tab-skins').textContent = t.tab_skins;
+    $('#btn-col-close').textContent = t.close;
     $('#version').textContent = `${t.version} ${__APP_VERSION__}`;
   }
 
@@ -420,7 +469,136 @@ class Game {
     this.renderCoins();
     this.renderUpgrades();
     this.renderSkillChip();
+    this.renderHomeButtons();
     if (this.world) sfx.setTrack(this.world.level.theme);
+  }
+
+  // ---------- collection & daily chest ----------
+
+  private renderHomeButtons() {
+    const s = this.save;
+    const unseen = s.heroes.some((h) => !s.seen.includes(`hero:${h}`)) || s.skins.some((k) => !s.seen.includes(`skin:${k}`));
+    $('#dot-collection').classList.toggle('on', unseen);
+    const ready = s.daily !== todayKey();
+    $('#dot-daily').classList.toggle('on', ready);
+    $('#btn-daily').classList.toggle('done', !ready);
+  }
+
+  private claimDaily() {
+    sfx.unlock();
+    if (this.save.daily === todayKey()) {
+      this.click();
+      this.toast(t.dailyDone);
+      return;
+    }
+    const coins = dailyCoins(this.save.level);
+    this.save.daily = todayKey();
+    this.save.coins += coins;
+    void writeSave(this.save);
+    sfx.treasure();
+    this.haptic('success');
+    this.renderCoins();
+    this.renderUpgrades();
+    this.renderHomeButtons();
+    this.toast(t.dailyGot(coins));
+  }
+
+  /** Short message over the home screen. */
+  private toast(text: string) {
+    this.clearBanners();
+    this.banner({ title: text, kind: 'tip' });
+  }
+
+  private openCollection() {
+    this.click();
+    this.renderCollection();
+    this.showModal('#collection');
+  }
+
+  private renderCollection() {
+    const s = this.save;
+    $('#col-coins').textContent = formatCount(s.coins);
+    $('#tab-heroes').classList.toggle('on', this.colTab === 'heroes');
+    $('#tab-skins').classList.toggle('on', this.colTab === 'skins');
+    const grid = $('#col-grid');
+    grid.innerHTML = '';
+    if (this.colTab === 'heroes') {
+      for (const h of HEROES) {
+        const owned = s.heroes.includes(h.id);
+        const name = heroName(h.id);
+        const lock = h.region ? t.lockedRegion(t[`theme_${h.region}`]) : '';
+        grid.appendChild(this.collectionCard('hero', h.id, name, t[`perk_${h.id}`], owned, s.hero === h.id, h.price, lock));
+        if (owned) this.markSeen(`hero:${h.id}`);
+      }
+    } else {
+      for (const k of SKINS) {
+        const owned = s.skins.includes(k.id);
+        grid.appendChild(this.collectionCard('skin', k.id, t[`skin_${k.id}`], t.skinInfo, owned, s.skin === k.id, k.price, k.champion ? t.lockedChampion : ''));
+        if (owned) this.markSeen(`skin:${k.id}`);
+      }
+    }
+  }
+
+  private collectionCard(kind: 'hero' | 'skin', id: string, name: string, info: string, owned: boolean, equipped: boolean, price: number, lock: string) {
+    const card = document.createElement('button');
+    const locked = !owned && !!lock;
+    const affordable = !owned && !locked && this.save.coins >= price;
+    card.className = `col-card${equipped ? ' equipped' : owned ? ' owned' : locked ? ' locked' : affordable ? ' affordable' : ''}`;
+    card.dataset.id = id;
+    const thumb = document.createElement('div');
+    thumb.className = 'col-thumb';
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = this.view.thumbnail(kind, id);
+    thumb.appendChild(img);
+    const nameEl = document.createElement('div');
+    nameEl.className = 'col-name';
+    nameEl.textContent = name;
+    const infoEl = document.createElement('div');
+    infoEl.className = 'col-perk';
+    infoEl.textContent = info;
+    const action = document.createElement('div');
+    action.className = 'col-action';
+    if (equipped) action.textContent = t.equipped;
+    else if (owned) action.textContent = t.equip;
+    else if (locked) action.textContent = `🔒 ${lock}`;
+    else action.innerHTML = `<i class="coin"></i><span>${formatCount(price)}</span>`;
+    card.append(thumb, nameEl, infoEl, action);
+    card.addEventListener('click', () => this.pickCollectionItem(kind, id, price, owned, locked, card));
+    return card;
+  }
+
+  private pickCollectionItem(kind: 'hero' | 'skin', id: string, price: number, owned: boolean, locked: boolean, card: HTMLElement) {
+    sfx.unlock();
+    const s = this.save;
+    const deny = () => {
+      sfx.gateBad();
+      card.classList.remove('deny');
+      void card.offsetWidth;
+      card.classList.add('deny');
+    };
+    if (locked) return deny();
+    if (!owned) {
+      if (s.coins < price) {
+        this.toast(t.notEnough);
+        return deny();
+      }
+      s.coins -= price;
+      if (kind === 'hero') s.heroes.push(id as HeroId);
+      else s.skins.push(id as SkinId);
+      sfx.coin();
+      this.haptic('success');
+    } else {
+      this.click();
+    }
+    if (kind === 'hero') s.hero = id as HeroId;
+    else s.skin = id as SkinId;
+    void writeSave(s);
+    this.newWorld();
+    this.renderCoins();
+    this.renderUpgrades();
+    this.renderCollection();
+    document.querySelector(`.col-card[data-id="${id}"]`)?.classList.add('bought');
   }
 
   private cycleSkill() {
@@ -482,6 +660,10 @@ class Game {
     } else if (theme !== 'river' && this.markSeen(`theme:${theme}`)) {
       this.banner({ title: `${t.newRegion}：${t[`theme_${theme}`]}`, kind: 'intro' });
     }
+    const prize = heroForWin(this.save.level);
+    if (prize && !this.save.heroes.includes(prize)) {
+      this.banner({ title: t.finalBattle, sub: t.finalInfo(t[`boss_${prize}`]), kind: 'intro' });
+    }
   }
 
   private pause() {
@@ -504,9 +686,16 @@ class Game {
 
   private finish(won: boolean) {
     const w = this.world;
-    const reward = levelReward(this.save.level, won, w.army.count, w.progress, statsFor(this.save.upgrades).income) + w.coinsEarned;
+    const income = statsFor(this.save.upgrades).income;
+    const reward = Math.round(levelReward(this.save.level, won, w.army.count, w.progress, income) * w.perks.coinMul) + w.coinsEarned;
     const level = this.save.level;
     this.save.coins += reward;
+    // clearing a region recruits its boss; clearing the whole campaign earns the golden outfit
+    const newHero = won ? heroForWin(level) : null;
+    const recruited = newHero && !this.save.heroes.includes(newHero) ? newHero : null;
+    if (recruited) this.save.heroes.push(recruited);
+    const champion = won && level === CYCLE && !this.save.skins.includes('gold');
+    if (champion) this.save.skins.push('gold');
     if (won) {
       this.save.level++;
       this.save.failStreak = 0;
@@ -534,9 +723,16 @@ class Game {
       $('#result-title').textContent = won ? t.victory : t.defeat;
       $('#result-level').textContent = t.level(level);
       const unlocked = won ? SKILLS.find((k) => SKILL_UNLOCK[k] === level + 1) : undefined;
-      $('#result-detail').textContent = unlocked
-        ? `${t.newSkill}：${t[`skill_${unlocked}`]}！`
+      const portrait = $('#result-hero') as HTMLImageElement;
+      portrait.classList.toggle('show', !!recruited || champion);
+      if (recruited) portrait.src = this.view.thumbnail('hero', recruited);
+      else if (champion) portrait.src = this.view.thumbnail('skin', 'gold');
+      $('#result-detail').textContent = recruited
+        ? t.heroJoined(t[`boss_${recruited}`])
+        : champion ? t.championSkin
+        : unlocked ? `${t.newSkill}：${t[`skill_${unlocked}`]}！`
         : won ? t.survivors(Math.round(w.army.count)) : t.reached(Math.round(w.progress * 100));
+      if (recruited || champion) window.setTimeout(() => sfx.unlockFanfare(), 500);
       $('#btn-next').textContent = won ? t.next : t.retry;
       this.countUp($('#result-coins'), reward);
       this.showModal('#result');
@@ -725,6 +921,7 @@ class Game {
   /** Screenshot helper: stop the simulation but keep rendering. */
   debugFreeze(frames = 90, simulate = false) {
     // autoplay skips rendering, so let the camera and popups catch up first
+    this.view.snapCamera(this.world);
     for (let i = 0; i < frames; i++) {
       if (simulate && this.world.state === 'playing') {
         botSteer(this.world);
@@ -766,6 +963,10 @@ class Game {
   }
 }
 
+function heroName(id: HeroId) {
+  return id === 'king' || id === 'knight' || id === 'ranger' || id === 'mage' ? t[`hero_${id}`] : t[`boss_${id}`];
+}
+
 declare const __APP_VERSION__: string;
 
 const game = new Game();
@@ -778,6 +979,8 @@ void game.boot().then(() => {
   if (Number.isInteger(level) && level >= 1) game.debugSetLevel(level);
   const up = Number(params.get('up'));
   if (params.has('up') && Number.isInteger(up) && up >= 0) game.debugSetSave({ upgrades: { army: up, rate: up, damage: up, income: up } });
+  const coins = Number(params.get('coins'));
+  if (params.has('coins') && Number.isInteger(coins) && coins >= 0) game.debugSetSave({ coins });
 });
 // never leave the native splash up if startup fails for any reason
 if (Capacitor.isNativePlatform()) window.setTimeout(() => void SplashScreen.hide().catch(() => undefined), 5000);

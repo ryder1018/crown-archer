@@ -21,4 +21,12 @@ describe('parseSave', () => {
     expect(s.level).toBe(1);
     expect(s.coins).toBe(0);
   });
+
+  it('keeps owned collection items and rejects unknown ones', () => {
+    const s = parseSave(JSON.stringify({ hero: 'dragon', heroes: ['golem', 'dragon', 7], skin: 'violet', skins: ['violet'] }));
+    expect(s.heroes).toEqual(['king', 'golem']);
+    expect(s.hero).toBe('king');
+    expect(s.skins).toEqual(['azure', 'violet']);
+    expect(s.skin).toBe('violet');
+  });
 });
