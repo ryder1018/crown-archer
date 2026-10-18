@@ -14,7 +14,7 @@
 ```bash
 npm ci
 npm run dev          # http://localhost:5173 ，加上 ?debug 可在 console 使用 window.game
-npm test             # 遊戲邏輯、存檔、收藏庫、平衡（自動駕駛 bot 跑 55 關）
+npm test             # 遊戲邏輯、存檔、收藏庫、平衡（自動駕駛 bot 跑 65 關）
 npm run build        # 產出 dist/
 ```
 

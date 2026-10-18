@@ -279,10 +279,59 @@ export function mageGeometry() {
   ]);
 }
 
+/** Valkyrie with a winged helm, spear and round shield, facing -z. */
+export function valkyrieGeometry() {
+  const p = PALETTE;
+  const silver = 0xd9e3ee;
+  const cape = 0x2a5bd6;
+  return merge([
+    [at(new THREE.BoxGeometry(0.13, 0.34, 0.15), -0.09, 0.17, 0), 0x6a7a8a],
+    [at(new THREE.BoxGeometry(0.13, 0.34, 0.15), 0.09, 0.17, 0), 0x6a7a8a],
+    [at(new THREE.CylinderGeometry(0.2, 0.3, 0.5, 8), 0, 0.58, 0), silver],
+    [at(new THREE.CylinderGeometry(0.31, 0.31, 0.06, 8), 0, 0.36, 0), p.gold],
+    [at(new THREE.BoxGeometry(0.56, 0.72, 0.04), 0, 0.55, 0.25, -0.12), cape],
+    [at(new THREE.IcosahedronGeometry(0.18, 1), 0, 0.98, 0), p.skin],
+    [at(new THREE.BoxGeometry(0.045, 0.06, 0.04), -0.06, 0.99, -0.165), 0x1a3a8a],
+    [at(new THREE.BoxGeometry(0.045, 0.06, 0.04), 0.06, 0.99, -0.165), 0x1a3a8a],
+    [at(new THREE.BoxGeometry(0.4, 0.5, 0.1), 0, 0.82, 0.14), 0xffd76a],
+    [at(new THREE.SphereGeometry(0.2, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), 0, 1.06, 0), silver],
+    [at(new THREE.BoxGeometry(0.04, 0.24, 0.3), -0.2, 1.18, 0.05, 0, 0, 0.5), 0xffffff],
+    [at(new THREE.BoxGeometry(0.04, 0.24, 0.3), 0.2, 1.18, 0.05, 0, 0, -0.5), 0xffffff],
+    [at(new THREE.CylinderGeometry(0.025, 0.025, 1.7, 5), 0.34, 0.85, -0.05), 0x8a5a2b],
+    [at(new THREE.ConeGeometry(0.07, 0.26, 4), 0.34, 1.82, -0.05), silver],
+    [at(new THREE.CylinderGeometry(0.28, 0.28, 0.06, 12), -0.33, 0.6, -0.05, 0, 0, Math.PI / 2), cape],
+    [at(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 8), -0.37, 0.6, -0.05, 0, 0, Math.PI / 2), p.gold],
+  ]);
+}
+
+/** Ninja in black with a red scarf and a katana on the back, facing -z. */
+export function ninjaGeometry() {
+  const dark = 0x23232e;
+  const red = 0xd0262e;
+  return merge([
+    [at(new THREE.BoxGeometry(0.12, 0.34, 0.14), -0.09, 0.17, 0), dark],
+    [at(new THREE.BoxGeometry(0.12, 0.34, 0.14), 0.09, 0.17, 0), dark],
+    [at(new THREE.CylinderGeometry(0.18, 0.24, 0.5, 8), 0, 0.58, 0), dark],
+    [at(new THREE.CylinderGeometry(0.25, 0.25, 0.07, 8), 0, 0.4, 0), red],
+    [at(new THREE.IcosahedronGeometry(0.18, 1), 0, 0.97, 0), dark],
+    [at(new THREE.BoxGeometry(0.3, 0.07, 0.04), 0, 0.99, -0.17), PALETTE.skin],
+    [at(new THREE.BoxGeometry(0.05, 0.04, 0.03), -0.06, 0.99, -0.19), 0x111111],
+    [at(new THREE.BoxGeometry(0.05, 0.04, 0.03), 0.06, 0.99, -0.19), 0x111111],
+    [at(new THREE.CylinderGeometry(0.19, 0.19, 0.06, 8), 0, 1.06, 0), red],
+    [at(new THREE.BoxGeometry(0.06, 0.04, 0.45), 0.08, 1.04, 0.32, 0.4), red],
+    [at(new THREE.BoxGeometry(0.06, 0.04, 0.38), -0.05, 1.0, 0.3, 0.6), red],
+    [at(new THREE.BoxGeometry(0.035, 0.85, 0.06), 0, 0.72, 0.2, 0, 0, 0.7), 0xd9e3ee],
+    [at(new THREE.BoxGeometry(0.06, 0.24, 0.07), -0.26, 1.08, 0.2, 0, 0, 0.7), 0x2a1a10],
+    [at(new THREE.BoxGeometry(0.16, 0.03, 0.1), -0.18, 1.0, 0.2, 0, 0, 0.7), PALETTE.gold],
+    [at(new THREE.BoxGeometry(0.06, 0.06, 0.06), 0.24, 0.62, -0.12), 0xb8c3cf],
+  ]);
+}
+
 /** Hero meshes for the non-boss heroes. Boss heroes reuse the boss rigs. */
-export function heroMesh(kind: 'king' | 'knight' | 'ranger' | 'mage') {
+export function heroMesh(kind: 'king' | 'knight' | 'ranger' | 'mage' | 'valkyrie' | 'ninja') {
   if (kind === 'king') return kingGroup();
-  const geo = kind === 'knight' ? knightGeometry() : kind === 'ranger' ? rangerGeometry() : mageGeometry();
+  const build = { knight: knightGeometry, ranger: rangerGeometry, mage: mageGeometry, valkyrie: valkyrieGeometry, ninja: ninjaGeometry };
+  const geo = build[kind]();
   const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
   mesh.scale.setScalar(1.25);
   return mesh;
@@ -309,9 +358,62 @@ export function barrelGeometry() {
 
 export type DecorKind =
   | 'pine' | 'round' | 'cactus' | 'rock' | 'snowpine' | 'deadtree' | 'grave' | 'lavarock'
-  | 'palm' | 'jungletree' | 'ruin' | 'mushroom' | 'reed' | 'cloudpuff' | 'crystal';
+  | 'palm' | 'jungletree' | 'ruin' | 'mushroom' | 'reed' | 'cloudpuff' | 'crystal'
+  | 'ship' | 'buoy' | 'sakuratree' | 'lantern' | 'spire' | 'darkcrystal';
 
 export function treeGeometry(kind: DecorKind) {
+  if (kind === 'ship') {
+    // a small sailing boat bobbing on the water
+    return merge([
+      [at(new THREE.BoxGeometry(1.4, 0.6, 3.2), 0, 0.5, 0), 0x7a4a24],
+      [at(new THREE.ConeGeometry(0.7, 1.0, 4), 0, 0.5, -2.0, -Math.PI / 2, Math.PI / 4), 0x7a4a24],
+      [at(new THREE.BoxGeometry(1.5, 0.12, 3.3), 0, 0.85, 0), 0x5a3418],
+      [at(new THREE.CylinderGeometry(0.07, 0.07, 3.2, 5), 0, 2.4, 0), 0x5a3418],
+      [at(new THREE.BoxGeometry(0.06, 1.8, 1.6), 0, 2.6, 0.1), 0xf4ecd8],
+      [at(new THREE.BoxGeometry(0.05, 0.5, 0.7), 0, 4.0, 0), 0x1a1a1a],
+    ]);
+  }
+  if (kind === 'buoy') {
+    return merge([
+      [at(new THREE.CylinderGeometry(0.35, 0.45, 0.6, 8), 0, 0.3, 0), 0xe23b3b],
+      [at(new THREE.CylinderGeometry(0.36, 0.36, 0.15, 8), 0, 0.45, 0), 0xffffff],
+      [at(new THREE.ConeGeometry(0.2, 0.6, 6), 0, 0.9, 0), 0xe23b3b],
+    ]);
+  }
+  if (kind === 'sakuratree') {
+    return merge([
+      [at(new THREE.CylinderGeometry(0.16, 0.26, 1.6, 6), 0, 0.8, 0), 0x5a3a2a],
+      [at(new THREE.CylinderGeometry(0.07, 0.1, 0.9, 5), 0.4, 1.7, 0, 0, 0, -0.7), 0x5a3a2a],
+      [at(new THREE.IcosahedronGeometry(1.05, 0), 0, 2.3, 0), 0xffb6d9],
+      [at(new THREE.IcosahedronGeometry(0.75, 0), 0.9, 2.0, 0.2), 0xff9ac8],
+      [at(new THREE.IcosahedronGeometry(0.7, 0), -0.8, 2.1, -0.2), 0xffcfe4],
+    ]);
+  }
+  if (kind === 'lantern') {
+    const stone = 0xa8a49a;
+    return merge([
+      [at(new THREE.BoxGeometry(0.6, 0.15, 0.6), 0, 0.07, 0), stone],
+      [at(new THREE.CylinderGeometry(0.12, 0.15, 0.8, 6), 0, 0.55, 0), stone],
+      [at(new THREE.BoxGeometry(0.5, 0.1, 0.5), 0, 1.0, 0), stone],
+      [at(new THREE.BoxGeometry(0.36, 0.34, 0.36), 0, 1.22, 0), 0xffd76a],
+      [at(new THREE.ConeGeometry(0.48, 0.32, 4), 0, 1.55, 0, 0, Math.PI / 4), stone],
+    ]);
+  }
+  if (kind === 'spire') {
+    return merge([
+      [at(new THREE.ConeGeometry(0.6, 3.2, 5), 0, 1.6, 0), 0x2a2034],
+      [at(new THREE.ConeGeometry(0.35, 1.8, 5), 0.6, 0.9, 0.2, 0, 0, -0.25), 0x3a2e48],
+      [at(new THREE.ConeGeometry(0.3, 1.4, 5), -0.5, 0.7, -0.1, 0, 0, 0.3), 0x3a2e48],
+    ]);
+  }
+  if (kind === 'darkcrystal') {
+    return merge([
+      [at(new THREE.OctahedronGeometry(0.5, 0), 0, 1.1, 0), 0xb05cff],
+      [at(new THREE.OctahedronGeometry(0.32, 0), 0.45, 0.7, 0.2), 0xff4a8a],
+      [at(new THREE.OctahedronGeometry(0.28, 0), -0.4, 0.6, -0.1), 0x8a3ad0],
+      [at(new THREE.DodecahedronGeometry(0.55, 0), 0, 0.15, 0), 0x2a2034],
+    ]);
+  }
   if (kind === 'palm') {
     const parts: Part[] = [];
     for (let i = 0; i < 5; i++) parts.push([at(new THREE.CylinderGeometry(0.13 - i * 0.012, 0.15 - i * 0.012, 0.6, 6), i * 0.06, 0.3 + i * 0.56, 0, 0, 0, -0.06), i % 2 ? 0x8a6a40 : 0x7a5a34]);

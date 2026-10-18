@@ -34,8 +34,11 @@ export interface Barrel {
 
 export interface Hazard { id: number; d: number; x0: number; x1: number; lethality: number; passed: boolean }
 
-/** rock: thrown projectile, leap: the boss itself, poison: bottle that leaves a pool, bolt: lightning from the sky */
-export type ShotKind = 'rock' | 'leap' | 'poison' | 'bolt';
+/**
+ * rock: thrown projectile, leap: the boss itself, poison: bottle that leaves a pool, bolt: lightning from the sky,
+ * cannon: a row of cannonballs across the road, slash: a sword wave rolling towards the army, meteor: falling from the sky
+ */
+export type ShotKind = 'rock' | 'leap' | 'poison' | 'bolt' | 'cannon' | 'slash' | 'meteor';
 
 /** A boss attack that lands on a marked spot, aimed at where the army will be. */
 export interface BossShot {
@@ -115,6 +118,11 @@ const BOSS_ATTACK_INTERVAL = 1.3;
 const SHOT_FLIGHT = 1.4;
 const LEAP_FLIGHT = 1.2;
 const BOLT_DELAY = 1.05;
+const CANNON_FLIGHT = 1.5;
+const SLASH_FLIGHT = 1.3;
+const METEOR_FLIGHT = 1.4;
+/** boss abilities that fire marked attacks on the throw timer */
+const RANGED: BossAbility[] = ['throw', 'poison', 'lightning', 'cannon', 'slash', 'meteor'];
 const POOL_TIME = 5;
 /** share of the soldiers standing in poison lost per second */
 const POOL_DRAIN = 0.24;
@@ -123,6 +131,8 @@ const SHIELD_DOWN = 5.5;
 const SHIELD_FACTOR = 0.15;
 const ENRAGE_AT = 0.35;
 const CHEST_TIME = 14;
+/** seconds of the army's full firepower a boss takes at least, counted when it wakes up */
+const BOSS_MIN_FIGHT = 7;
 const SKILL_CHARGE_TIME = 22;
 const STORM_TIME = 2.4;
 const STORM_TICK = 0.12;
@@ -185,7 +195,7 @@ export class World {
           kind: e.boss, abilities: new Set(e.abilities),
           d: e.d, x: 0, hp: e.hp, maxHp: e.hp, damage: e.damage, speed: e.speed,
           state: 'idle', attackTimer: 0.6, hitTime: -1, smashTime: -1,
-          throwTimer: def ? def.throwInterval * 0.6 : 0, summonTimer: def ? def.summonInterval * 0.5 : 0,
+          throwTimer: def ? Math.min(1.6, def.throwInterval * 0.5) : 0, summonTimer: def ? def.summonInterval * 0.5 : 0,
           shieldTimer: 3, shielded: false, enraged: false, chestTimer: -1,
           leapTimer: def ? def.leapInterval * 0.35 : 0, leaping: false,
         };
@@ -413,16 +423,18 @@ export class World {
     const a = this.army;
     const r = b.reward;
     this.chargeSkill(b.small ? 0.01 : 0.08);
-    if (r.type === 'soldiers') a.count += r.amount;
-    else if (r.type === 'rapid') a.rapidTimer = Math.max(a.rapidTimer, r.amount);
+    const p = this.perks;
+    const buff = 1 + p.buffTime;
+    if (r.type === 'soldiers') a.count += Math.round(r.amount * (1 + p.barrelBonus));
+    else if (r.type === 'rapid') a.rapidTimer = Math.max(a.rapidTimer, r.amount * buff);
     else if (r.type === 'multi') a.multishot = Math.min(3, a.multishot + r.amount);
-    else if (r.type === 'fire') a.burnTimer = Math.max(a.burnTimer, r.amount);
+    else if (r.type === 'fire') a.burnTimer = Math.max(a.burnTimer, r.amount * buff);
     else if (r.type === 'freeze') {
-      this.freezeTimer = Math.max(this.freezeTimer, r.amount);
+      this.freezeTimer = Math.max(this.freezeTimer, r.amount * buff);
       this.events.push({ type: 'freeze' });
     } else if (r.type === 'bomb') this.bomb();
     else {
-      const n = Math.round(r.amount * this.perks.coinMul);
+      const n = Math.round(r.amount * p.coinMul * (1 + p.barrelBonus));
       this.coinsEarned += n;
       this.events.push({ type: 'coins', n, x: b.x, d: b.d });
     }
@@ -530,7 +542,9 @@ export class World {
       const chosen = row.find((o) => a.x >= o.x0 && a.x <= o.x1) ?? row[0];
       chosen.chosen = true;
       const before = Math.round(a.count);
-      a.count = Math.round(applyMod(a.count, chosen.op, chosen.value));
+      let after = applyMod(a.count, chosen.op, chosen.value);
+      if (after > before) after = before + (after - before) * (1 + this.perks.gateBonus);
+      a.count = Math.round(after);
       this.events.push({ type: 'gatePass', delta: a.count - before, gate: chosen });
     }
   }
@@ -613,7 +627,13 @@ export class World {
       this.updateChest(dt);
       return;
     }
-    if (b.state === 'idle' && b.d - a.d < BOSS_WAKE_RANGE) b.state = 'walk';
+    if (b.state === 'idle' && b.d - a.d < BOSS_WAKE_RANGE) {
+      b.state = 'walk';
+      // a big army would otherwise melt the boss before it shows a single trick: it always lasts a few seconds
+      const dps = a.count * this.stats.damage * this.stats.fireRate;
+      const floor = dps * BOSS_MIN_FIGHT;
+      if (b.hp < floor) b.hp = b.maxHp = Math.round(floor);
+    }
     if (b.state === 'idle' || this.frozen) return;
     const rage = b.enraged ? 1.7 : 1;
     const def = BOSSES[b.kind];
@@ -645,7 +665,7 @@ export class World {
         this.events.push({ type: 'bossSmash', n, frost });
       }
     }
-    if (b.abilities.has('throw') || b.abilities.has('poison') || b.abilities.has('lightning')) {
+    if (RANGED.some((k) => b.abilities.has(k))) {
       b.throwTimer -= dt;
       if (b.throwTimer <= 0) {
         b.throwTimer = def.throwInterval * (b.enraged ? 0.7 : 1);
@@ -661,6 +681,26 @@ export class World {
             const x = a.x + sx * side;
             if (Math.abs(x) < ROAD_HALF_WIDTH + 0.5) this.launch('bolt', clamp(x, -ROAD_HALF_WIDTH + 0.6, ROAD_HALF_WIDTH - 0.6), lead + (this.rng() - 0.5) * 2, br, BOLT_DELAY + 0.15, 0.5);
           }
+        } else if (b.abilities.has('cannon')) {
+          // a row of cannonballs across the road with one gap to slip through
+          const lead = this.leadD(CANNON_FLIGHT);
+          const xs = [-4, -2, 0, 2, 4];
+          const gap = Math.floor(this.rng() * xs.length);
+          xs.forEach((x, i) => {
+            if (i !== gap) this.launch('cannon', x, lead, 1.15, CANNON_FLIGHT + i * 0.1, 0.4);
+          });
+        } else if (b.abilities.has('slash')) {
+          // three sword waves roll in along the army's lane: step aside before the last one arrives
+          const lead = this.leadD(SLASH_FLIGHT);
+          [7, 3.5, 0].forEach((ahead, i) => this.launch('slash', a.x, lead + ahead, r, SLASH_FLIGHT - 0.5 + i * 0.25, 0.4));
+        } else if (b.abilities.has('meteor')) {
+          // a meteor shower over the arena, one of them right on the army
+          const lead = this.leadD(METEOR_FLIGHT);
+          this.launch('meteor', a.x, lead, r, METEOR_FLIGHT, 0.4);
+          for (let i = 0; i < 4; i++) {
+            const x = -ROAD_HALF_WIDTH + 1 + this.rng() * (ROAD_HALF_WIDTH * 2 - 2);
+            this.launch('meteor', x, lead + (this.rng() - 0.5) * 8, 1.2 + this.rng() * 0.6, METEOR_FLIGHT + 0.3 + i * 0.3, 0.4);
+          }
         } else if (b.abilities.has('poison')) {
           this.launch('poison', a.x, this.leadD(SHOT_FLIGHT), r * 1.1, SHOT_FLIGHT, 0.12);
         } else {
@@ -673,7 +713,7 @@ export class World {
       if (b.summonTimer <= 0) {
         b.summonTimer = def.summonInterval * (b.enraged ? 0.7 : 1);
         const count = Math.max(4, Math.round(b.damage * 1.6));
-        const unit: UnitKind = b.kind === 'lich' ? 'skeleton' : b.kind === 'witch' ? 'goblin' : 'infantry';
+        const unit: UnitKind = b.kind === 'lich' || b.kind === 'demon' ? 'skeleton' : b.kind === 'witch' ? 'goblin' : 'infantry';
         const x = clamp(b.x + (this.rng() - 0.5) * 3, -2.5, 2.5);
         const squad = makeSquad(this.nextId++, b.d - 3.5, x, count, true, unit);
         squad.aggro = true;

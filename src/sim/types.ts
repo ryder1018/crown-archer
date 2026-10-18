@@ -43,14 +43,17 @@ export type EntitySpec =
   | { kind: 'hazard'; d: number; x0: number; x1: number; lethality: number }
   | { kind: 'boss'; d: number; hp: number; damage: number; speed: number; boss: BossKind; abilities: BossAbility[] };
 
-export type Theme = 'river' | 'meadow' | 'snow' | 'desert' | 'volcano' | 'night' | 'jungle' | 'swamp' | 'sky';
+export type Theme =
+  | 'river' | 'meadow' | 'snow' | 'desert' | 'volcano' | 'night' | 'jungle' | 'swamp' | 'sky' | 'harbor' | 'sakura' | 'dark';
 
 /** Enemy unit types. Skeletons are the lich's summons and fight like infantry. */
 export type UnitKind = 'infantry' | 'cavalry' | 'archer' | 'armored' | 'skeleton' | 'goblin';
 
-export type BossKind = 'giant' | 'troll' | 'frost' | 'warlord' | 'golem' | 'lich' | 'ape' | 'witch' | 'titan' | 'chest';
+export type BossKind =
+  | 'giant' | 'troll' | 'frost' | 'warlord' | 'golem' | 'lich' | 'ape' | 'witch' | 'titan' | 'pirate' | 'samurai' | 'demon' | 'chest';
 
-export type BossAbility = 'smash' | 'throw' | 'summon' | 'shield' | 'frost' | 'enrage' | 'leap' | 'poison' | 'lightning';
+export type BossAbility =
+  | 'smash' | 'throw' | 'summon' | 'shield' | 'frost' | 'enrage' | 'leap' | 'poison' | 'lightning' | 'cannon' | 'slash' | 'meteor';
 
 export type SkillKind = 'storm' | 'freeze' | 'horn';
 
@@ -81,8 +84,15 @@ export interface Perks {
   skillCharge: number;
   /** skill charge at the start of a run */
   skillStart: number;
+  /** extra share of soldiers gained from good gates */
+  gateBonus: number;
+  /** extra duration of barrel power-ups (rapid fire, fire arrows, freeze) */
+  buffTime: number;
+  /** extra soldiers and coins from barrels and crates */
+  barrelBonus: number;
 }
 
 export const NO_PERKS: Perks = {
   meleeTaken: 1, bossTaken: 1, hazardTaken: 1, enemySpeed: 1, raise: 0, coinMul: 1, skillCharge: 1, skillStart: 0,
+  gateBonus: 0, buffTime: 0, barrelBonus: 0,
 };

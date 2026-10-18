@@ -20,7 +20,8 @@ const shot = async (name) => {
 };
 const setup = (level, up = 6) => page.evaluate(([lv, u]) => {
   const seen = ['theme:meadow', 'theme:snow', 'theme:desert', 'theme:volcano', 'theme:night', 'theme:jungle', 'theme:swamp', 'theme:sky',
-    'boss:troll', 'boss:frost', 'boss:warlord', 'boss:golem', 'boss:lich', 'boss:ape', 'boss:witch', 'boss:titan',
+    'theme:harbor', 'theme:sakura', 'theme:dark',
+    'boss:troll', 'boss:frost', 'boss:warlord', 'boss:golem', 'boss:lich', 'boss:ape', 'boss:witch', 'boss:titan', 'boss:pirate', 'boss:samurai', 'boss:demon',
     'unit:cavalry', 'unit:archer', 'unit:armored', 'unit:goblin', 'item:fire', 'item:freeze', 'item:bomb', 'skill:storm', 'skill:freeze', 'skill:horn', 'tip:mystery'];
   window.game.debugSetSave({ level: lv, coins: 12850, failStreak: 0, skill: 'storm', seen, upgrades: { army: u, rate: u, damage: u, income: u } });
 }, [level, up]);
@@ -56,8 +57,8 @@ await capture('4-skill', [9, 10, 8, 6], 3, (w) => {
   if (w.skillCharge >= 1 && target && w.boss.state === 'idle') w.useSkill();
   return w.stormActive && target;
 }, [55, true]);
-await capture('5-region', [43, 44, 42], 14, (w) =>
-  w.shots.filter((s) => s.kind === 'bolt').length >= 2 && w.shots.some((s) => s.t < 0.5), [75, false]);
+await capture('5-region', [58, 59, 57, 56], 24, (w) =>
+  w.shots.filter((s) => s.kind === 'meteor').length >= 3 && w.shots.some((s) => s.t < 0.7), [75, false]);
 await capture('6-treasure', [14, 21, 28], 9, (w) => w.boss.chestTimer > 0 && w.boss.chestTimer < 10 && w.boss.hp < w.boss.maxHp * 0.7);
 
 // home with upgrades and a skill

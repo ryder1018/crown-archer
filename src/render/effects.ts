@@ -136,6 +136,15 @@ export class Effects {
     } else if (kind === 'lich') {
       this.projGeo = new THREE.SphereGeometry(0.55, 12, 8);
       this.projMat = new THREE.MeshBasicMaterial({ color: accent });
+    } else if (kind === 'pirate') {
+      this.projGeo = new THREE.SphereGeometry(0.5, 10, 8);
+      this.projMat = new THREE.MeshLambertMaterial({ color: 0x2e2e34 });
+    } else if (kind === 'samurai') {
+      this.projGeo = new THREE.TorusGeometry(1.3, 0.14, 4, 20, Math.PI);
+      this.projMat = new THREE.MeshBasicMaterial({ color: 0xeaf6ff, transparent: true, opacity: 0.85 });
+    } else if (kind === 'demon') {
+      this.projGeo = new THREE.IcosahedronGeometry(0.75, 0);
+      this.projMat = new THREE.MeshBasicMaterial({ color: 0xff7a1a });
     } else if (kind === 'ape') {
       this.projGeo = new THREE.IcosahedronGeometry(0.6, 0);
       this.projMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2a, flatShading: true });
@@ -207,6 +216,19 @@ export class Effects {
       this.wave(x, z, 0x8aff4a, r * 2.5, 0.5);
       return;
     }
+    if (kind === 'slash') {
+      this.particles.burst(x, 0.8, z, 0xffffff, 26, 7, 0.12, 0.5);
+      this.wave(x, z, 0xffffff, r * 3, 0.35);
+      return;
+    }
+    if (kind === 'meteor') {
+      this.explosion(x, z, 0xff6a10, 0.6 + r * 0.3);
+      return;
+    }
+    if (kind === 'cannon') {
+      this.explosion(x, z, 0x8a8a8a, 0.5 + r * 0.25);
+      return;
+    }
     if (kind === 'leap') {
       this.particles.burst(x, 0.3, z, 0x9a8a6a, 40, 8, 0.25, 0.9);
       this.wave(x, z, 0xffffff, r * 4, 0.6);
@@ -269,15 +291,28 @@ export class Effects {
       }
       const f = 1 - shot.t / shot.total;
       // the leaping boss and lightning have no flying projectile, only the warning marker
-      view.proj.visible = shot.kind === 'rock' || shot.kind === 'poison';
+      view.proj.visible = shot.kind !== 'leap' && shot.kind !== 'bolt';
       view.marker.position.set(shot.x, 0.05 + (shot.id % 5) * 0.004, -shot.d);
       const pulse = 1 + Math.sin(this.time * 18) * 0.04;
       view.marker.scale.set(shot.r * pulse, 1, shot.r * pulse);
       view.fill.scale.setScalar(Math.max(0.01, f));
       const sx = shot.fromX + (shot.x - shot.fromX) * f;
       const sz = -(shot.fromD - 1 + (shot.d - shot.fromD + 1) * f);
-      view.proj.position.set(sx, 5.5 * (1 - f) + Math.sin(f * Math.PI) * 5 + 0.4, sz);
-      view.proj.rotation.set(this.time * 5, this.time * 3, 0);
+      if (shot.kind === 'meteor') {
+        // drops out of the sky at a slant, trailing fire
+        const k = 1 - f;
+        view.proj.position.set(shot.x + k * 5, 0.4 + k * 24, -shot.d - k * 8);
+        view.proj.rotation.set(this.time * 4, this.time * 2, 0);
+        if (Math.random() < 0.6) this.particles.burst(view.proj.position.x, view.proj.position.y, view.proj.position.z, 0xff8a1a, 1, 1.5, 0.22, 0.4);
+      } else if (shot.kind === 'slash') {
+        // a sword wave skimming along the road towards its mark
+        view.proj.position.set(sx, 1.1, sz);
+        view.proj.rotation.set(0, 0, 0);
+        view.proj.scale.setScalar(0.6 + f * 0.8);
+      } else {
+        view.proj.position.set(sx, 5.5 * (1 - f) + Math.sin(f * Math.PI) * 5 + 0.4, sz);
+        view.proj.rotation.set(this.time * 5, this.time * 3, 0);
+      }
     }
     for (const [id, view] of this.shots) {
       if (live.has(id)) continue;

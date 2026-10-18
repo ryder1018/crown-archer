@@ -17,7 +17,7 @@ export function statsFor(up: UpgradeLevels): Stats {
 /** Stats a player is assumed to have when reaching `level`; levels are tuned against this. */
 export function referenceStats(level: number): Stats {
   // upgrade costs grow faster than rewards, so later on players can afford fewer upgrades per level
-  const lv = level <= 26 ? Math.floor(Math.max(0, level - 1) * 0.6) : Math.floor(15 + (level - 26) * 0.42);
+  const lv = level <= 26 ? Math.floor(Math.max(0, level - 1) * 0.6) : Math.floor(15 + (level - 26) * 0.32);
   return statsFor({ army: lv, rate: lv, damage: lv, income: lv });
 }
 

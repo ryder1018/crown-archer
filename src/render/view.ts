@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { t } from '../i18n';
-import { isBossHero, skinDef, type HeroId, type SkinId } from '../meta/collection';
+import { isBossHero, skinDef, type HeroId, type ShopHero, type SkinId } from '../meta/collection';
 import { ARROW_RANGE, ARROW_SPEED, MAX_ARMY_DISPLAY, MAX_ARROWS, type Reward, type UnitKind } from '../sim/types';
 import { type Barrel, type Gate, type Hazard, type World, type WorldEvent } from '../sim/world';
 import { bossRig, chestRig, type BossRig, type ChestRig } from './bosses';
@@ -119,6 +119,8 @@ export class GameView {
   /** On the home screen the camera frames the army above the menu. */
   homeView = false;
   private homeBlend = 0;
+  /** how far the home camera looks back; shorter screens need the army framed higher, above the menu */
+  private homeLook = 7;
   private camX = 0;
   private camZ = 0;
   private bossDeadAge = -1;
@@ -270,6 +272,7 @@ export class GameView {
   resize(w: number, h: number) {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
+    this.homeLook = 7 + THREE.MathUtils.clamp(2.16 - h / w, 0, 0.6) * 12;
     // keep roughly the same road width on screen regardless of the aspect ratio
     const hfov = THREE.MathUtils.degToRad(46);
     const vfov = 2 * Math.atan(Math.tan(hfov / 2) / this.camera.aspect);
@@ -869,7 +872,7 @@ export class GameView {
     const sx = (Math.random() - 0.5) * this.shake * 0.6;
     const sy = (Math.random() - 0.5) * this.shake * 0.6;
     this.camera.position.set(this.camX + sx, height + sy, this.camZ + back);
-    this.camera.lookAt(this.camX * 0.8, 0, this.camZ - (bossFight ? 13 : 12) + this.homeBlend * 7);
+    this.camera.lookAt(this.camX * 0.8, 0, this.camZ - (bossFight ? 13 : 12) + this.homeBlend * this.homeLook);
   }
 
   private syncOverlay(world: World, dt: number) {
@@ -896,7 +899,7 @@ function buildHero(id: HeroId): { root: THREE.Object3D; rig: BossRig | null } {
     rig.root.rotation.y = Math.PI;
     return { root: rig.root, rig };
   }
-  return { root: heroMesh(id as 'king' | 'knight' | 'ranger' | 'mage'), rig: null };
+  return { root: heroMesh(id as ShopHero), rig: null };
 }
 
 function disposeTree(root: THREE.Object3D) {

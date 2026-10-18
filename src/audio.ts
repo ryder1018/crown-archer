@@ -244,6 +244,12 @@ export class Sfx {
     [520, 700, 900].forEach((f, i) => this.tone(f, 0.12, 'sine', 0.08, f * 1.6, 0.05 + i * 0.06));
   }
 
+  slash() {
+    if (!this.ready('slash', 0.15)) return;
+    this.hiss(0.18, 4500, 2, 0.25);
+    this.tone(1800, 0.15, 'sine', 0.06, 900);
+  }
+
   thud() {
     if (!this.ready('thud', 0.3)) return;
     this.tone(60, 0.6, 'sine', 0.9, 28);
@@ -333,7 +339,8 @@ export class Sfx {
   }
 }
 
-export type TrackName = 'river' | 'meadow' | 'snow' | 'desert' | 'volcano' | 'night' | 'jungle' | 'swamp' | 'sky' | 'boss';
+export type TrackName =
+  | 'river' | 'meadow' | 'snow' | 'desert' | 'volcano' | 'night' | 'jungle' | 'swamp' | 'sky' | 'harbor' | 'sakura' | 'dark' | 'boss';
 
 interface Track {
   bpm: number;
@@ -360,6 +367,12 @@ const TRACKS: Record<TrackName, Track> = {
   swamp: { bpm: 96, chords: [[146.8, 174.6, 220], [138.6, 164.8, 207.7], [130.8, 155.6, 196], [138.6, 164.8, 207.7]], pattern: [0, -1, 1, 0, -1, 2, 1, -1], lead: 'square', leadVol: 0.07, sustain: 1.1, drums: 'light' },
   // sky: bright, airy major arpeggios
   sky: { bpm: 128, chords: [[261.6, 329.6, 392], [293.7, 370, 440], [246.9, 311.1, 370], [220, 277.2, 329.6]], pattern: [0, 1, 2, 4, 2, 1, 3, 1], lead: 'sine', leadVol: 0.28, sustain: 1.2, drums: 'light' },
+  // harbor: a rollicking sea shanty
+  harbor: { bpm: 138, chords: [[146.8, 174.6, 220], [130.8, 164.8, 196], [116.5, 146.8, 174.6], [110, 138.6, 164.8]], pattern: [0, 2, 2, 1, 0, 2, 4, 2], lead: 'triangle', leadVol: 0.24, sustain: 0.6, drums: 'march' },
+  // sakura: pentatonic and gentle
+  sakura: { bpm: 100, chords: [[220, 261.6, 329.6], [196, 246.9, 293.7], [220, 261.6, 329.6], [164.8, 196, 246.9]], pattern: [0, 1, 2, -1, 4, 2, 1, -1], lead: 'sine', leadVol: 0.3, sustain: 1.3, drums: 'light' },
+  // dark: a grim, driving march to the demon lord
+  dark: { bpm: 120, chords: [[130.8, 155.6, 196], [123.5, 146.8, 185], [116.5, 138.6, 174.6], [123.5, 146.8, 185]], pattern: [0, 0, 1, 0, 2, 0, 1, 3], lead: 'sawtooth', leadVol: 0.06, sustain: 0.8, drums: 'heavy', bass8: true },
   boss: { bpm: 144, chords: [[146.8, 174.6, 220], [116.5, 146.8, 174.6], [130.8, 164.8, 196], [110, 138.6, 164.8]], pattern: [0, 2, 1, 2, 3, 2, 1, 2], lead: 'square', leadVol: 0.1, sustain: 0.6, drums: 'heavy', bass8: true },
 };
 

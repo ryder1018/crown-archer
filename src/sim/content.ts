@@ -1,7 +1,9 @@
 import type { BossAbility, BossKind, RewardType, SkillKind, Theme, UnitKind } from './types';
 
 /** The campaign loops through these regions, five levels each. */
-export const THEME_ORDER: Theme[] = ['river', 'meadow', 'snow', 'desert', 'volcano', 'night', 'jungle', 'swamp', 'sky'];
+export const THEME_ORDER: Theme[] = [
+  'river', 'meadow', 'snow', 'desert', 'volcano', 'night', 'jungle', 'swamp', 'sky', 'harbor', 'sakura', 'dark',
+];
 export const LEVELS_PER_THEME = 5;
 export const CYCLE = THEME_ORDER.length * LEVELS_PER_THEME;
 
@@ -36,6 +38,9 @@ export const BOSSES: Record<Exclude<BossKind, 'chest'>, BossDef> = {
   ape: { theme: 'jungle', abilities: ['smash', 'leap', 'throw'], hpMul: 0.62, throwInterval: 3.8, summonInterval: 0, leapInterval: 6.5 },
   witch: { theme: 'swamp', abilities: ['smash', 'poison', 'summon'], hpMul: 0.62, throwInterval: 3.2, summonInterval: 5, leapInterval: 0 },
   titan: { theme: 'sky', abilities: ['smash', 'lightning', 'shield', 'enrage'], hpMul: 0.55, throwInterval: 3.6, summonInterval: 0, leapInterval: 0 },
+  pirate: { theme: 'harbor', abilities: ['smash', 'cannon', 'summon'], hpMul: 0.6, throwInterval: 4.2, summonInterval: 5.5, leapInterval: 0 },
+  samurai: { theme: 'sakura', abilities: ['smash', 'slash', 'enrage'], hpMul: 0.6, throwInterval: 3.0, summonInterval: 0, leapInterval: 0 },
+  demon: { theme: 'dark', abilities: ['smash', 'meteor', 'summon', 'shield', 'enrage'], hpMul: 0.45, throwInterval: 4.0, summonInterval: 6, leapInterval: 0 },
 };
 
 export function bossFor(level: number): Exclude<BossKind, 'chest'> {

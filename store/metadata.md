@@ -34,7 +34,7 @@ Info.plist 已設定 `ITSAppUsesNonExemptEncryption = NO`，上傳後不會再�
 拉弓射箭，一路稱王！
 
 **宣傳文字 Promotional Text（170 字內）**
-選對閘門、萬箭齊發！九大地區、九大首領，打贏的首領還能收為英雄——帶領你的弓兵團一路壯大，奪下王冠！
+選對閘門、萬箭齊發！十二大地區、十二大首領，打贏的首領還能收為英雄——帶領你的弓兵團一路打到魔王城！
 
 **描述 Description**
 ```
@@ -45,11 +45,11 @@ Info.plist 已設定 `ITSAppUsesNonExemptEncryption = NO`，上傳後不會再�
 ◆ 選對閘門，兵力暴增
 +50、x2、÷2、-30……每道閘門都會改變你的兵力。選錯了也別慌：對著閘門射箭，數字會一路往上加！
 
-◆ 九大首領，各有絕招
-森林巨魔投擲巨石、冰霜巨人冰凍你的弓兵、熔岩魔像開啟護盾、叢林猿王飛身砸下、沼澤女巫潑灑毒池、雷霆泰坦召喚落雷……看到地上的紅圈就快閃開！
+◆ 十二大首領，各有絕招
+森林巨魔投擲巨石、冰霜巨人冰凍你的弓兵、叢林猿王飛身砸下、沼澤女巫潑灑毒池、雷霆泰坦召喚落雷、海盜船長砲彈齊發、武士將軍劍氣逼人、魔王降下流星雨……看到地上的紅圈就快閃開！
 
 ◆ 收服首領，組建英雄收藏庫
-打贏一個地區，該地區的首領就會成為你的英雄，各有專屬能力。還能用金幣招募聖騎士、精靈遊俠、大法師，替弓兵換上翡翠、櫻花、暗影等外觀。
+打贏一個地區，該地區的首領就會成為你的英雄，各有專屬能力。還能用金幣招募聖騎士、精靈遊俠、大法師、女武神、忍者，替弓兵換上翡翠、深海、櫻花、熔岩、皇家白金等外觀。
 
 ◆ 形形色色的敵軍
 衝鋒極快的騎兵、遠距離放箭的弓手、刀槍不入的重甲兵、成群結隊的哥布林，還有可能大賺也可能大虧的「?」神秘閘門。
@@ -60,8 +60,8 @@ Info.plist 已設定 `ITSAppUsesNonExemptEncryption = NO`，上傳後不會再�
 ◆ 擊破木桶，取得道具
 連射、多重箭、火焰箭、冰封、炸彈、援軍與金幣。
 
-◆ 九大地區，無盡關卡
-河上石橋、青翠草原、冰雪山道、黃沙大漠、熔岩火山、幽暗墓地、叢林遺跡、劇毒沼澤、天空之城，每個地區都有自己的配樂。每 7 關還有寶藏關，每天還能開一次每日寶箱！
+◆ 十二大地區，無盡關卡
+河上石橋、青翠草原、冰雪山道、黃沙大漠、熔岩火山、幽暗墓地、叢林遺跡、劇毒沼澤、天空之城、海盜港灣、櫻花古都、魔王城，每個地區都有自己的配樂。每 7 關還有寶藏關，每天還能開一次每日寶箱！
 
 ◆ 升級你的軍團
 用金幣強化初始兵力、射速、攻擊力與收益。
@@ -87,7 +87,7 @@ Crown Archers
 Draw bows. Claim the crown!
 
 **Promotional Text**
-Pick the right gates, dodge boulders and lightning, topple nine giant bosses and recruit them as your heroes. Claim the crown!
+Pick the right gates, dodge cannons and meteors, topple twelve giant bosses and recruit them as your heroes. Claim the crown!
 
 **Description**
 ```
@@ -98,11 +98,11 @@ Drag left and right to lead your army of archers. They shoot on their own — yo
 ◆ PICK THE RIGHT GATE
 +50, x2, ÷2, -30… every gate changes the size of your army. Picked a bad one? Shoot it! Your arrows push its number up.
 
-◆ NINE GIANT BOSSES
-The Forest Troll hurls boulders, the Frost Giant freezes your bows, the Lava Golem raises a shield, the Jungle Ape King leaps onto your army, the Bog Witch splashes poison and the Thunder Titan calls down lightning. Dodge the red circles!
+◆ TWELVE GIANT BOSSES
+The Frost Giant freezes your bows, the Jungle Ape King leaps onto your army, the Bog Witch splashes poison, the Thunder Titan calls down lightning, the Pirate Captain fires broadsides, the Samurai Shogun sends sword waves and the Demon Lord rains meteors. Dodge the red circles!
 
 ◆ RECRUIT THE BOSSES YOU BEAT
-Clear a land and its boss becomes a hero with its own perk. Hire the Paladin, Elf Ranger and Archmage with coins, and dress your archers in Emerald, Sakura or Shadow outfits.
+Clear a land and its boss becomes a hero with its own perk. Hire the Paladin, Elf Ranger, Archmage, Valkyrie and Ninja with coins, and dress your archers in Emerald, Ocean, Sakura, Magma or Royal outfits.
 
 ◆ ALL KINDS OF ENEMIES
 Charging cavalry, archers that shoot from afar, armoured knights that shrug off arrows, goblin swarms, and "?" mystery gates that might pay off big… or not.
@@ -113,8 +113,8 @@ Call down an arrow storm, freeze the battlefield or sound the war horn for reinf
 ◆ SMASH BARRELS FOR POWER-UPS
 Rapid fire, multi-shot, fire arrows, freeze, bombs, reinforcements and coins.
 
-◆ NINE LANDS, ENDLESS LEVELS
-River bridges, green meadows, frozen passes, golden deserts, lava peaks, haunted graves, jungle ruins, a poison bog and a citadel in the sky, each with its own music. Treasure runs every 7th level and a free daily chest!
+◆ TWELVE LANDS, ENDLESS LEVELS
+River bridges, green meadows, frozen passes, golden deserts, lava peaks, haunted graves, jungle ruins, a poison bog, a sky citadel, a pirate cove, a sakura capital and the Demon's Keep, each with its own music. Treasure runs every 7th level and a free daily chest!
 
 ◆ UPGRADE YOUR LEGION
 Spend coins on starting army, fire rate, damage and income.

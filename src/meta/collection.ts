@@ -3,7 +3,9 @@ import { NO_PERKS, type BossKind, type Perks, type Stats, type Theme } from '../
 
 /** Bosses become playable heroes once their region is cleared. */
 export type BossHero = Exclude<BossKind, 'chest'>;
-export type HeroId = 'king' | 'knight' | 'ranger' | 'mage' | BossHero;
+/** heroes bought with coins */
+export type ShopHero = 'king' | 'knight' | 'ranger' | 'mage' | 'valkyrie' | 'ninja';
+export type HeroId = ShopHero | BossHero;
 
 export interface HeroDef {
   id: HeroId;
@@ -23,6 +25,8 @@ export const HEROES: HeroDef[] = [
   hero('knight', 900, null, { meleeTaken: 0.75 }),
   hero('ranger', 1800, null, {}, { rate: 1.12 }),
   hero('mage', 3200, null, { skillCharge: 1.4, skillStart: 0.3 }),
+  hero('valkyrie', 4500, null, { gateBonus: 0.15 }),
+  hero('ninja', 6000, null, { buffTime: 0.6 }, { rate: 1.06 }),
   hero('giant', 0, 'river', {}, { armyMul: 1.2 }),
   hero('troll', 0, 'meadow', { hazardTaken: 0.4 }),
   hero('frost', 0, 'snow', { enemySpeed: 0.8 }),
@@ -32,6 +36,9 @@ export const HEROES: HeroDef[] = [
   hero('ape', 0, 'jungle', {}, { damage: 1.15 }),
   hero('witch', 0, 'swamp', { skillStart: 1 }),
   hero('titan', 0, 'sky', {}, { rate: 1.1, damage: 1.1 }),
+  hero('pirate', 0, 'harbor', { barrelBonus: 0.5 }),
+  hero('samurai', 0, 'sakura', { enemySpeed: 0.9 }, { damage: 1.12 }),
+  hero('demon', 0, 'dark', {}, { armyMul: 1.15, rate: 1.1, damage: 1.1 }),
 ];
 
 export const heroDef = (id: HeroId) => HEROES.find((h) => h.id === id) ?? HEROES[0];
@@ -68,7 +75,8 @@ export function earnedHeroes(level: number): BossHero[] {
   return out;
 }
 
-export type SkinId = 'azure' | 'emerald' | 'violet' | 'sunset' | 'sakura' | 'shadow' | 'gold';
+export type SkinId =
+  | 'azure' | 'emerald' | 'violet' | 'ocean' | 'sunset' | 'sakura' | 'frostbite' | 'shadow' | 'magma' | 'royal' | 'gold';
 
 export interface SkinDef {
   id: SkinId;
@@ -83,9 +91,13 @@ export const SKINS: SkinDef[] = [
   { id: 'azure', price: 0, colors: [0x2f7bff, 0x1d4fb8, 0xff6a3d] },
   { id: 'emerald', price: 500, colors: [0x2fb85a, 0x1d7a3a, 0xffe066] },
   { id: 'violet', price: 900, colors: [0x8a4fff, 0x5a2fb8, 0x7fe8ff] },
+  { id: 'ocean', price: 1200, colors: [0x1fb5b0, 0x0f6f8a, 0xffe066] },
   { id: 'sunset', price: 1400, colors: [0xff8a1a, 0xc05a00, 0xffffff] },
   { id: 'sakura', price: 2000, colors: [0xff7ab8, 0xd04a8a, 0xffffff] },
+  { id: 'frostbite', price: 2500, colors: [0xe8f6ff, 0x6fc8f0, 0x7fe8ff] },
   { id: 'shadow', price: 3000, colors: [0x3a3f4a, 0x1e2128, 0xb05cff] },
+  { id: 'magma', price: 3500, colors: [0x2e2624, 0xff6a10, 0xffb020] },
+  { id: 'royal', price: 5000, colors: [0xf6f2ea, 0xd9a72a, 0xd9a72a] },
   { id: 'gold', price: 0, champion: true, colors: [0xffc93c, 0xc98700, 0xff4a4a] },
 ];
 

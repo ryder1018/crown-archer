@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { ROAD_HALF_WIDTH, type Theme } from '../sim/types';
 import { treeGeometry, type DecorKind } from './models';
-import { cloudTexture, groundTexture, lavaTexture, seededNoise, stoneTexture, swampTexture, waterTexture } from './textures';
+import { abyssTexture, cloudTexture, groundTexture, lavaTexture, seededNoise, stoneTexture, swampTexture, waterTexture } from './textures';
 
 interface ThemeDef {
   sky: number;
   road: [string, string];
   ground: [string, string] | null;
   /** what fills the sides when there is no ground */
-  liquid: 'water' | 'lava' | 'swamp' | 'cloud';
+  liquid: 'water' | 'lava' | 'swamp' | 'cloud' | 'abyss';
   wall: number;
   wallTop: number;
   decor: DecorKind[];
@@ -44,6 +44,18 @@ export const THEMES: Record<Theme, ThemeDef> = {
   sky: {
     sky: 0x6aa8ff, road: ['#eef1f7', '#b4bccd'], ground: null, liquid: 'cloud', wall: 0xf2f4fa, wallTop: 0xffd76a,
     decor: ['cloudpuff', 'cloudpuff', 'crystal'], hemiGround: 0xc8dcff, light: { hemi: 1.6, sun: 2.0, sunColor: 0xfff4dc }, fog: [60, 140],
+  },
+  harbor: {
+    sky: 0x8fd0ff, road: ['#b98a5a', '#7a5534'], ground: null, liquid: 'water', wall: 0x8a5a34, wallTop: 0xa8744a,
+    decor: ['ship', 'buoy', 'buoy'], hemiGround: 0x3d7fbf, light: DAY, fog: [55, 125],
+  },
+  sakura: {
+    sky: 0xffdcea, road: ['#d9cfc4', '#9c8f84'], ground: ['#8fcf6a', '#ffb6d9'], liquid: 'water', wall: 0xa83a2e, wallTop: 0x3a3a44,
+    decor: ['sakuratree', 'sakuratree', 'lantern'], hemiGround: 0x7aa860, light: { hemi: 1.5, sun: 1.8, sunColor: 0xfff0f4 }, fog: [55, 120],
+  },
+  dark: {
+    sky: 0x1e1230, road: ['#5a4a6a', '#2e2438'], ground: null, liquid: 'abyss', wall: 0x3a2e48, wallTop: 0x6a3a8a,
+    decor: ['spire', 'spire', 'darkcrystal'], hemiGround: 0x6a2a8a, light: { hemi: 1.05, sun: 1.35, sunColor: 0xd8b0ff }, fog: [36, 96],
   },
 };
 
@@ -97,14 +109,14 @@ export function buildEnvironment(theme: Theme, length: number, endD: number): En
     group.add(ground);
   } else {
     const lava = def.liquid === 'lava';
-    const tex = { water: waterTexture, lava: lavaTexture, swamp: swampTexture, cloud: cloudTexture }[def.liquid];
+    const tex = { water: waterTexture, lava: lavaTexture, swamp: swampTexture, cloud: cloudTexture, abyss: abyssTexture }[def.liquid];
     water = track(tex());
-    const tile = { water: 10, lava: 14, swamp: 12, cloud: 26 }[def.liquid];
+    const tile = { water: 10, lava: 14, swamp: 12, cloud: 26, abyss: 18 }[def.liquid];
     water.repeat.set(240 / tile, total / tile);
     const sea = new THREE.Mesh(
       track(new THREE.PlaneGeometry(240, total)),
       // lava glows on its own and clouds stay bright, so they ignore the lighting
-      track(lava || def.liquid === 'cloud' ? new THREE.MeshBasicMaterial({ map: water }) : new THREE.MeshLambertMaterial({ map: water })),
+      track(lava || def.liquid === 'cloud' || def.liquid === 'abyss' ? new THREE.MeshBasicMaterial({ map: water }) : new THREE.MeshLambertMaterial({ map: water })),
     );
     sea.rotation.x = -Math.PI / 2;
     // the cloud sea sits far below the sky bridge
@@ -165,7 +177,7 @@ export function buildEnvironment(theme: Theme, length: number, endD: number): En
   return {
     group,
     update(dt: number) {
-      if (water) water.offset.y += dt * { water: 0.04, lava: 0.015, swamp: 0.008, cloud: 0.02 }[def.liquid];
+      if (water) water.offset.y += dt * { water: 0.04, lava: 0.015, swamp: 0.008, cloud: 0.02, abyss: 0.012 }[def.liquid];
     },
     dispose() {
       for (const d of disposables) d.dispose();

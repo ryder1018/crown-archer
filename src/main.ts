@@ -7,7 +7,7 @@ import { StatusBar } from '@capacitor/status-bar';
 import { sfx } from './audio';
 import { formatCount, t } from './i18n';
 import {
-  dailyCoins, earnedHeroes, heroForWin, heroPerks, HEROES, heroStats, SKINS, todayKey, type HeroId, type SkinId,
+  dailyCoins, earnedHeroes, heroForWin, isBossHero, heroPerks, HEROES, heroStats, SKINS, todayKey, type HeroId, type SkinId,
 } from './meta/collection';
 import { levelReward, statsFor, upgradeCost, UPGRADE_KINDS, type UpgradeKind } from './meta/progression';
 import { loadSave, writeSave, type SaveData } from './meta/save';
@@ -233,10 +233,13 @@ class Game {
           this.haptic('success');
           break;
         case 'bossThrow':
-          if (ev.shot.kind !== 'bolt') sfx.whoosh();
+          if (ev.shot.kind === 'slash') sfx.slash();
+          else if (ev.shot.kind !== 'bolt') sfx.whoosh();
           break;
         case 'shotLand':
           if (ev.shot.kind === 'bolt') sfx.thunder();
+          else if (ev.shot.kind === 'cannon' || ev.shot.kind === 'meteor') sfx.boom();
+          else if (ev.shot.kind === 'slash') sfx.clash();
           else if (ev.shot.kind === 'poison') sfx.splash();
           else if (ev.shot.kind === 'leap') sfx.thud();
           else sfx.crash();
@@ -479,6 +482,10 @@ class Game {
     const s = this.save;
     const unseen = s.heroes.some((h) => !s.seen.includes(`hero:${h}`)) || s.skins.some((k) => !s.seen.includes(`skin:${k}`));
     $('#dot-collection').classList.toggle('on', unseen);
+    // the button shows whoever is leading the army right now
+    const portrait = $('#hero-portrait') as HTMLImageElement;
+    const src = this.view.thumbnail('hero', s.hero);
+    if (portrait.getAttribute('src') !== src) portrait.src = src;
     const ready = s.daily !== todayKey();
     $('#dot-daily').classList.toggle('on', ready);
     $('#btn-daily').classList.toggle('done', !ready);
@@ -964,7 +971,7 @@ class Game {
 }
 
 function heroName(id: HeroId) {
-  return id === 'king' || id === 'knight' || id === 'ranger' || id === 'mage' ? t[`hero_${id}`] : t[`boss_${id}`];
+  return isBossHero(id) ? t[`boss_${id}`] : t[`hero_${id}`];
 }
 
 declare const __APP_VERSION__: string;

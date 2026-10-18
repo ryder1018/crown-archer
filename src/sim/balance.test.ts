@@ -42,7 +42,7 @@ function run(level: number, stats: Stats, sloppy: boolean, seed: number, failStr
 it('balance report', () => {
   const none = statsFor({ army: 0, rate: 0, damage: 0, income: 0 });
   const lines = ['lvl  ref  sloppyRef  noUpg  sloppyNoUpg   (win rate over 5 seeds; avg secs)'];
-  for (const lv of [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 18, 20, 22, 24, 26, 29, 30, 32, 34, 36, 38, 40, 43, 45, 48, 55]) {
+  for (const lv of [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 18, 20, 22, 24, 26, 29, 30, 32, 34, 36, 38, 40, 43, 45, 47, 50, 52, 55, 57, 60, 65]) {
     const ref = referenceStats(lv);
     const cell = (stats: Stats, sloppy: boolean) => {
       let wins = 0;
@@ -65,7 +65,7 @@ it('campaign pacing with a sloppy player who buys the cheapest upgrade', () => {
   const attempts: number[] = [];
   const behind: string[] = [];
   let seed = 1;
-  for (let lv = 1; lv <= 55; lv++) {
+  for (let lv = 1; lv <= 65; lv++) {
     let tries = 0;
     for (;;) {
       tries++;

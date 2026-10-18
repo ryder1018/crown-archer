@@ -31,11 +31,14 @@ describe('content', () => {
     expect(themeFor(30)).toBe('night');
     expect(themeFor(31)).toBe('jungle');
     expect(themeFor(45)).toBe('sky');
-    expect(themeFor(46)).toBe('river');
+    expect(themeFor(46)).toBe('harbor');
+    expect(themeFor(55)).toBe('sakura');
+    expect(themeFor(60)).toBe('dark');
+    expect(themeFor(61)).toBe('river');
     expect(bossFor(38)).toBe('witch');
     expect(bossFor(12)).toBe('frost');
     expect(bossAbilities(3, 'giant')).toEqual(['smash']);
-    expect(bossAbilities(48, 'giant')).toContain('enrage');
+    expect(bossAbilities(63, 'giant')).toContain('enrage');
     expect(isBonusLevel(7)).toBe(true);
     expect(isBonusLevel(8)).toBe(false);
     expect(unlockedSkills(2)).toEqual([]);
@@ -208,6 +211,30 @@ describe('mechanics', () => {
     expect(bolts).toBeGreaterThanOrEqual(2);
   });
 
+  it('pirate cannons leave exactly one gap, sword waves roll in, meteors rain', () => {
+    const fire = (kind: BossKind, ability: BossAbility) => {
+      const w = new World(level([], 50, kind, [ability]), stats(10));
+      let most = 0;
+      step(w, 6, () => {
+        most = Math.max(most, w.shots.length);
+      });
+      return most;
+    };
+    expect(fire('pirate', 'cannon')).toBe(4);
+    expect(fire('samurai', 'slash')).toBe(3);
+    expect(fire('demon', 'meteor')).toBeGreaterThanOrEqual(4);
+    // standing in the cannon gap is safe
+    const w = new World(level([], 50, 'pirate', ['cannon']), stats(10));
+    const start = w.army.count;
+    step(w, 8, () => {
+      if (!w.shots.length) return;
+      const xs = new Set(w.shots.map((s) => s.x));
+      const gap = [-4, -2, 0, 2, 4].find((x) => !xs.has(x))!;
+      w.setTargetX(gap);
+    });
+    expect(w.army.count).toBeGreaterThan(start * 0.85);
+  });
+
   it('arrows fly through mystery gates and the gate is applied on entry', () => {
     const gates: EntitySpec = {
       kind: 'gates', d: 30, gates: [
@@ -222,6 +249,22 @@ describe('mechanics', () => {
     expect(w.gates[0].hitTime).toBe(-1);
     step(w, 3);
     expect(w.army.count).toBe(start * 2);
+  });
+
+  it('gate, power-up and barrel perks boost their rewards', () => {
+    const gate: EntitySpec = { kind: 'gates', d: 20, gates: [{ x0: -5, x1: 5, op: 'add', value: 20, step: 1e9 }] };
+    const gain = (gateBonus: number) => {
+      const w = new World(level([gate]), stats(0), 1, null, { ...NO_PERKS, gateBonus });
+      const start = w.army.count;
+      step(w, 3);
+      return w.army.count - start;
+    };
+    expect(gain(0)).toBe(20);
+    expect(gain(0.5)).toBe(30);
+    const barrel: EntitySpec = { kind: 'barrel', d: 15, x: 0, hp: 1, small: false, reward: { type: 'fire', amount: 8 } };
+    const w = new World(level([barrel]), stats(5), 1, null, { ...NO_PERKS, buffTime: 0.5 });
+    step(w, 2, () => w.setTargetX(0));
+    expect(w.army.burnTimer).toBeGreaterThan(9);
   });
 
   it('hero perks cut losses and raise fallen enemies', () => {

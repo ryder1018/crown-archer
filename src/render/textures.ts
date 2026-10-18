@@ -169,6 +169,35 @@ export function swampTexture() {
   return tex;
 }
 
+export function abyssTexture() {
+  const { c, ctx } = canvas(256, 256);
+  const g = ctx.createLinearGradient(0, 0, 256, 256);
+  g.addColorStop(0, '#2a1240');
+  g.addColorStop(1, '#170a26');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 256);
+  const rnd = seededNoise(17);
+  // swirling purple mist with glowing embers
+  for (let i = 0; i < 40; i++) {
+    const x = rnd() * 256;
+    const y = rnd() * 256;
+    const r = 14 + rnd() * 30;
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, 'rgba(150, 60, 220, 0.35)');
+    grad.addColorStop(1, 'rgba(150, 60, 220, 0)');
+    ctx.fillStyle = grad;
+    for (const dx of [-256, 0, 256]) for (const dy of [-256, 0, 256]) ctx.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
+  }
+  for (let i = 0; i < 50; i++) {
+    ctx.fillStyle = rnd() < 0.5 ? 'rgba(255, 120, 60, 0.8)' : 'rgba(220, 150, 255, 0.8)';
+    ctx.fillRect(rnd() * 256, rnd() * 256, 2, 2);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 export function cloudTexture() {
   const { c, ctx } = canvas(256, 256);
   ctx.fillStyle = '#cfe2ff';
